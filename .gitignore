@@ -1,0 +1,23 @@
+.venv/
+__pycache__/
+*.py[cod]
+build/
+dist/
+*.spec
+.DS_Store
+.local-backups/
+.now-cleaner-*/
+**/.now-cleaner-output.json
+**/SUMMARY/
+**/* - Cleaned and ready./
+*.zip
+*.pdf
+*.pptx
+*.docx
+*.xlsx
+*.epub
+*.log
+*.key
+*api_key*
+*secret*
+*credential*

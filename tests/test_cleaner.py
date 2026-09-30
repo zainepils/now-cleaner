@@ -1,0 +1,91 @@
+import os
+import subprocess
+import sys
+import tempfile
+import unittest
+import zipfile
+from pathlib import Path
+from unittest import mock
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import clean_now_notebooklm as cleaner
+
+
+SCRIPT = Path(__file__).resolve().parents[1] / "clean_now_notebooklm.py"
+
+
+class CleanerTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.source = self.root / "source"
+        self.source.mkdir()
+        self.env = {**os.environ, "HOME": str(self.root), "OPENAI_API_KEY": ""}
+
+    def add_zip(self, name, files):
+        with zipfile.ZipFile(self.source / name, "w") as archive:
+            for path, content in files.items():
+                archive.writestr(path, content)
+
+    def run_cleaner(self, *extra):
+        return subprocess.run(
+            [sys.executable, str(SCRIPT), "--source", str(self.source), *extra],
+            capture_output=True,
+            text=True,
+            env=self.env,
+        )
+
+    def test_refuses_unsafe_output_names(self):
+        self.add_zip("One.zip", {"note.txt": "sample"})
+        for name in ("source", "..", "../other", str(self.root)):
+            with self.subTest(name=name):
+                result = self.run_cleaner("--output-name", name, "--overwrite")
+                self.assertNotEqual(result.returncode, 0)
+        self.assertTrue((self.source / "One.zip").exists())
+
+    def test_unmarked_folder_is_never_overwritten(self):
+        self.add_zip("One.zip", {"note.txt": "sample"})
+        output = self.root / "source - Cleaned and ready."
+        output.mkdir()
+        (output / "precious.txt").write_text("keep")
+        result = self.run_cleaner("--overwrite")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual((output / "precious.txt").read_text(), "keep")
+
+    def test_reports_are_unique_and_managed_overwrite_works(self):
+        self.add_zip("Module 1.zip", {"Week 1/a.html": "<p>First</p>"})
+        self.add_zip("Module (1).zip", {"Week 2/b.html": "<p>Second</p>"})
+        first = self.run_cleaner()
+        self.assertEqual(first.returncode, 0, first.stderr)
+        output = self.root / "source - Cleaned and ready."
+        self.assertTrue((output / ".now-cleaner-output.json").exists())
+        reports = list((output / "SUMMARY").glob("_conversion_report*.txt"))
+        self.assertEqual(len(reports), 2)
+        self.assertEqual(self.run_cleaner().returncode, 1)
+        (output / "stale.txt").write_text("old")
+        second = self.run_cleaner("--overwrite")
+        self.assertEqual(second.returncode, 0, second.stderr)
+        self.assertFalse((output / "stale.txt").exists())
+        summary = (output / "SUMMARY" / "SUMMARY.html").read_text()
+        self.assertIn("final output documents", summary)
+
+    def test_failed_rebuild_preserves_previous_output(self):
+        self.add_zip("One.zip", {"note.txt": "sample"})
+        self.assertEqual(self.run_cleaner().returncode, 0)
+        output = self.root / "source - Cleaned and ready."
+        original = (output / "SUMMARY" / "SUMMARY.html").read_bytes()
+        args = [str(SCRIPT), "--source", str(self.source), "--overwrite"]
+        with mock.patch.object(sys, "argv", args), \
+             mock.patch.object(cleaner, "load_api_key", return_value=""), \
+             mock.patch.object(cleaner, "run_pipeline", side_effect=RuntimeError("synthetic failure")):
+            self.assertEqual(cleaner.main(), 1)
+        self.assertEqual((output / "SUMMARY" / "SUMMARY.html").read_bytes(), original)
+
+    def test_no_zips_creates_no_output(self):
+        self.assertEqual(self.run_cleaner().returncode, 1)
+        self.assertFalse((self.root / "source - Cleaned and ready.").exists())
+
+
+if __name__ == "__main__":
+    unittest.main()
