@@ -6,7 +6,9 @@ The repository's code and documentation are available under the [PolyForm Noncom
 
 ## What it does
 
-Choose a folder of ZIP exports, then run the cleaner. It extracts each archive, flattens nested folders into descriptive filenames, removes images, copies supported files, and converts some document and text formats to `.txt`. If LibreOffice is installed, PPTX files may be converted to PDF; otherwise the tool attempts a text fallback. It creates per-ZIP conversion reports and an HTML run summary. Optional similar-file merging concatenates related text sources and can remove the *generated* source copies after merging; the input ZIPs are not changed. Merging is heuristic, so review results before using them.
+Choose a folder of ZIP exports, then run the cleaner. It extracts each archive, flattens nested folders into descriptive filenames, removes images, copies supported files, and converts some document and text formats to `.txt`. PowerPoint `.pptx` files are copied unchanged apart from their filenames, because NotebookLM now supports them directly; LibreOffice is not required. Files over the 200 MB limit are skipped and reported. Older `.ppt` files still receive only a best-effort text decode, which may produce unreadable output. It creates per-ZIP conversion reports and an HTML run summary. Optional similar-file merging concatenates related text sources and can remove the *generated* source copies after merging; the input ZIPs are not changed. Merging is heuristic, so review results before using them.
+
+See Google's [supported source types](https://support.google.com/gemininotebook/answer/16215270?hl=en) for current NotebookLM compatibility.
 
 Without an OpenAI key, ZIP labels are cleaned locally. If `OPENAI_API_KEY` or `~/.config/now-cleaner/openai_api_key` is set, the tool can request a short label from OpenAI and cache it locally. This optional request sends the ZIP's filename stem, not the ZIP contents. Do not use AI naming with sensitive filenames unless permitted.
 
@@ -55,6 +57,10 @@ The demo generator creates fictional material only. Never commit real course exp
 - The processor writes a local ZIP-name cache in `~/.config/now-cleaner`.
 - The app is macOS-focused; the CLI may work elsewhere but is not validated there.
 
-## Project credit
+## Project development
 
-The owner defined the workflow, requirements, and product direction and tested/refined runs. Substantial implementation, debugging, and packaging were carried out with Codex. This project should be described as AI-assisted development, not independently hand-coded end-to-end.
+Zaine Pilsworth designed the workflow, defined the product requirements and user experience, and led testing and refinement of NOW Cleaner.
+
+Codex was used as an AI coding assistant throughout implementation, debugging and packaging. Zaine reviewed outputs, tested behaviour, refined requirements and directed changes throughout development.
+
+This project should be described as AI-assisted development rather than independently hand-coded end-to-end.

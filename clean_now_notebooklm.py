@@ -12,8 +12,8 @@ What this script does:
    - If file is at zip root, uses "TOP LEVEL" as folder marker.
 6) Converts unsupported formats to NotebookLM-friendly text where possible.
    - HTML/HTM -> TXT (clean text)
-   - PPTX -> PDF (via LibreOffice/OpenOffice if available; else TXT fallback)
-   - DOCX/PPTX/XLSX/EPUB -> TXT (best-effort text extraction)
+   - PPTX is supported directly and copied without conversion.
+   - XLSX/EPUB -> TXT (best-effort text extraction)
    - CSV/TSV/JSON/XML/YAML/RTF/log-like text files -> TXT
 7) Removes image files from output.
 8) Optionally uses OpenAI once per zip to simplify the zip-name prefix (cached).
@@ -34,7 +34,6 @@ import json
 import os
 import re
 import shutil
-import subprocess
 import sys
 import tempfile
 from uuid import uuid4
@@ -56,6 +55,7 @@ SUPPORTED_NOTEBOOKLM_EXTS = {
     ".md",
     ".markdown",
     ".docx",
+    ".pptx",
     ".csv",
     ".3g2",
     ".3gp",
@@ -377,32 +377,6 @@ def read_text_file(path: Path) -> str:
             continue
     # Last resort.
     return path.read_text(encoding="utf-8", errors="ignore")
-
-
-def find_soffice() -> Optional[str]:
-    candidates = [
-        shutil.which("soffice"),
-        "/Applications/LibreOffice.app/Contents/MacOS/soffice",
-        "/Applications/OpenOffice.app/Contents/MacOS/soffice",
-    ]
-    for c in candidates:
-        if c and Path(c).exists():
-            return c
-    return None
-
-
-def convert_pptx_to_pdf(src: Path) -> Optional[Path]:
-    soffice = find_soffice()
-    if not soffice:
-        return None
-    out_dir = src.parent
-    cmd = [soffice, "--headless", "--convert-to", "pdf", "--outdir", str(out_dir), str(src)]
-    try:
-        subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    except Exception:
-        return None
-    pdf_path = out_dir / f"{src.stem}.pdf"
-    return pdf_path if pdf_path.exists() else None
 
 
 def convert_html_to_text(path: Path) -> str:
@@ -857,16 +831,6 @@ def process_zip(zip_path: Path, output_root: Path, zip_label: str) -> tuple[list
                     )
                 continue
 
-            if ext == ".pptx":
-                pdf_path = convert_pptx_to_pdf(src)
-                if pdf_path and is_within_notebooklm_size_limit(pdf_path):
-                    out = unique_path(output_root / f"{base}.pdf")
-                    shutil.copy2(pdf_path, out)
-                    results.append(FileResult(source=rel, output=out, action="converted", note=".pptx -> .pdf"))
-                    continue
-                if pdf_path and pdf_path.exists():
-                    pdf_path.unlink(missing_ok=True)
-
             # Convert unsupported to txt where possible.
             try:
                 text = convert_to_text(src).strip()
@@ -875,8 +839,6 @@ def process_zip(zip_path: Path, output_root: Path, zip_label: str) -> tuple[list
                 out = unique_path(output_root / f"{base}.txt")
                 out.write_text(text + "\n", encoding="utf-8")
                 note = f"{ext or '[no-ext]'} -> .txt"
-                if ext == ".pptx":
-                    note = ".pptx -> .txt (PDF missing or over NotebookLM limit)"
                 results.append(FileResult(source=rel, output=out, action="converted", note=note))
             except Exception as exc:
                 results.append(FileResult(source=rel, output=None, action="skipped", note=str(exc)))

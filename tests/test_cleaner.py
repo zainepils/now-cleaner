@@ -86,6 +86,34 @@ class CleanerTests(unittest.TestCase):
         self.assertEqual(self.run_cleaner().returncode, 1)
         self.assertFalse((self.root / "source - Cleaned and ready.").exists())
 
+    def test_pptx_is_preserved_even_with_merging(self):
+        payload = b"synthetic presentation bytes\x00\xff"
+        self.add_zip("Slides.zip", {"Week 1/lecture.PPTX": payload})
+        original_zip = (self.source / "Slides.zip").read_bytes()
+        result = self.run_cleaner("--merge-similar")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        output = self.root / "source - Cleaned and ready."
+        presentations = list(output.glob("*.pptx"))
+        self.assertEqual(len(presentations), 1)
+        self.assertEqual(presentations[0].read_bytes(), payload)
+        self.assertIn("Week 1", presentations[0].name)
+        self.assertFalse(list(output.glob("*.pdf")))
+        self.assertFalse(list(output.glob("*.txt")))
+        self.assertEqual((self.source / "Slides.zip").read_bytes(), original_zip)
+        reports = list((output / "SUMMARY").glob("_conversion_report*.txt"))
+        self.assertIn("Copied supported: 1", reports[0].read_text())
+
+    def test_oversized_pptx_is_skipped_not_converted(self):
+        self.add_zip("Slides.zip", {"lecture.pptx": b"synthetic presentation"})
+        output = self.root / "output"
+        output.mkdir()
+        with mock.patch.object(cleaner, "NOTEBOOKLM_MAX_FILE_BYTES", 4):
+            results, _ = cleaner.process_zip(self.source / "Slides.zip", output, "Slides")
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].action, "skipped")
+        self.assertIn("200MB", results[0].note)
+        self.assertFalse(list(output.iterdir()))
+
 
 if __name__ == "__main__":
     unittest.main()
