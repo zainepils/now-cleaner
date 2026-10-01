@@ -13,9 +13,9 @@ What this script does:
 6) Converts unsupported formats to NotebookLM-friendly text where possible.
    - HTML/HTM -> TXT (clean text)
    - PPTX is supported directly and copied without conversion.
-   - XLSX/EPUB -> TXT (best-effort text extraction)
+   - XLSX -> TXT (best-effort text extraction)
    - CSV/TSV/JSON/XML/YAML/RTF/log-like text files -> TXT
-7) Removes image files from output.
+7) Preserves EPUBs and supported images; --exclude-images removes images.
 8) Optionally uses OpenAI once per zip to simplify the zip-name prefix (cached).
 9) Writes per-zip conversion reports into SUMMARY/.
 10) Creates SUMMARY/SUMMARY.html with navigable run results and zip labels.
@@ -56,6 +56,7 @@ SUPPORTED_NOTEBOOKLM_EXTS = {
     ".markdown",
     ".docx",
     ".pptx",
+    ".epub",
     ".csv",
     ".3g2",
     ".3gp",
@@ -98,10 +99,12 @@ TEXT_LIKE_EXTS = {
 
 IGNORE_FILENAMES = {".ds_store"}
 IGNORE_DIRNAMES = {"__macosx"}
-IMAGE_EXTS = {
+SUPPORTED_IMAGE_EXTS = {
     ".png",
     ".jpg",
     ".jpeg",
+    ".jpe",
+    ".jp2",
     ".gif",
     ".bmp",
     ".tif",
@@ -109,10 +112,11 @@ IMAGE_EXTS = {
     ".webp",
     ".heic",
     ".heif",
-    ".svg",
     ".ico",
     ".avif",
 }
+IMAGE_EXTS = SUPPORTED_IMAGE_EXTS | {".svg"}
+SUPPORTED_NOTEBOOKLM_EXTS.update(SUPPORTED_IMAGE_EXTS)
 
 MERGEABLE_EXTS = {
     ".txt",
@@ -257,6 +261,11 @@ def parse_args() -> argparse.Namespace:
         "--output-name",
         default="",
         help="Name of output folder created next to source folder (default: '<source folder name> - Cleaned and ready.')",
+    )
+    parser.add_argument(
+        "--exclude-images",
+        action="store_true",
+        help="Exclude image files from output (supported images are kept by default)",
     )
     parser.add_argument(
         "--overwrite",
@@ -786,7 +795,7 @@ def detect_external_downloads_from_original(src: Path, rel: Path) -> list[LinkDe
     return hits
 
 
-def process_zip(zip_path: Path, output_root: Path, zip_label: str) -> tuple[list[FileResult], list[LinkDetection]]:
+def process_zip(zip_path: Path, output_root: Path, zip_label: str, exclude_images: bool = False) -> tuple[list[FileResult], list[LinkDetection]]:
     results: list[FileResult] = []
     detections_all: list[LinkDetection] = []
     detections_seen: set[tuple[str, str, str]] = set()
@@ -810,8 +819,9 @@ def process_zip(zip_path: Path, output_root: Path, zip_label: str) -> tuple[list
                     detections_seen.add(k)
                     detections_all.append(d)
 
-            if ext in IMAGE_EXTS:
-                results.append(FileResult(source=rel, output=None, action="deleted", note="image removed"))
+            if ext in IMAGE_EXTS and (exclude_images or ext not in SUPPORTED_IMAGE_EXTS):
+                note = "image excluded by option" if exclude_images else "unsupported image format"
+                results.append(FileResult(source=rel, output=None, action="deleted", note=note))
                 continue
 
             if ext in SUPPORTED_NOTEBOOKLM_EXTS:
@@ -1752,7 +1762,7 @@ def run_pipeline(args: argparse.Namespace, source_dir: Path, output_root: Path, 
         try:
             zip_label, label_source = get_clean_zip_label(zip_path, api_key, args.openai_model, name_cache)
             save_name_cache(cache_path, name_cache)
-            results, detections = process_zip(zip_path, output_root, zip_label)
+            results, detections = process_zip(zip_path, output_root, zip_label, exclude_images=args.exclude_images)
             # Deduplicate detections across all zips by URL.
             unique_global: list[LinkDetection] = []
             for d in detections:

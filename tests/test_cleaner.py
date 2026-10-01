@@ -114,6 +114,51 @@ class CleanerTests(unittest.TestCase):
         self.assertIn("200MB", results[0].note)
         self.assertFalse(list(output.iterdir()))
 
+    def test_epub_and_supported_images_are_preserved(self):
+        extensions = sorted(cleaner.SUPPORTED_IMAGE_EXTS | {".epub"})
+        files = {f"Week 1/sample{ext.upper()}": b"synthetic bytes\x00\xff" for ext in extensions}
+        files["Week 1/icon.svg"] = "<svg/>"
+        self.add_zip("Resources.zip", files)
+        result = self.run_cleaner("--merge-similar")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        output = self.root / "source - Cleaned and ready."
+        for ext in extensions:
+            with self.subTest(ext=ext):
+                matches = list(output.glob(f"*{ext}"))
+                self.assertEqual(len(matches), 1)
+                self.assertEqual(matches[0].read_bytes(), b"synthetic bytes\x00\xff")
+        self.assertFalse(list(output.glob("*.svg")))
+        self.assertFalse(list(output.glob("*.txt")))
+
+    def test_exclude_images_keeps_epub(self):
+        self.add_zip("Resources.zip", {"diagram.png": b"image", "book.epub": b"ebook"})
+        result = self.run_cleaner("--exclude-images")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        output = self.root / "source - Cleaned and ready."
+        self.assertFalse(list(output.glob("*.png")))
+        self.assertEqual(len(list(output.glob("*.epub"))), 1)
+        reports = list((output / "SUMMARY").glob("_conversion_report*.txt"))
+        self.assertIn("Images removed: 1", reports[0].read_text())
+
+    def test_oversized_epub_and_image_are_skipped(self):
+        self.add_zip("Resources.zip", {"book.epub": b"ebook", "diagram.png": b"image"})
+        output = self.root / "output"
+        output.mkdir()
+        with mock.patch.object(cleaner, "NOTEBOOKLM_MAX_FILE_BYTES", 4):
+            results, _ = cleaner.process_zip(self.source / "Resources.zip", output, "Resources")
+        self.assertEqual(len(results), 2)
+        self.assertTrue(all(result.action == "skipped" for result in results))
+        self.assertFalse(list(output.iterdir()))
+
+    def test_desktop_image_option_reaches_backend(self):
+        import now_cleaner_desktop as desktop
+        app = desktop.CleanerApp.__new__(desktop.CleanerApp)
+        app.keep_images_var = mock.Mock()
+        for keep in (True, False):
+            app.keep_images_var.get.return_value = keep
+            command = app._build_command(self.source, "", False, False)
+            self.assertEqual("--exclude-images" in command, not keep)
+
 
 if __name__ == "__main__":
     unittest.main()

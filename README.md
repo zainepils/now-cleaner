@@ -6,7 +6,7 @@ The repository's code and documentation are available under the [PolyForm Noncom
 
 ## What it does
 
-Choose a folder of ZIP exports, then run the cleaner. It extracts each archive, flattens nested folders into descriptive filenames, removes images, copies supported files, and converts some document and text formats to `.txt`. PowerPoint `.pptx` files are copied unchanged apart from their filenames, because NotebookLM now supports them directly; LibreOffice is not required. Files over the 200 MB limit are skipped and reported. Older `.ppt` files still receive only a best-effort text decode, which may produce unreadable output. It creates per-ZIP conversion reports and an HTML run summary. Optional similar-file merging concatenates related text sources and can remove the *generated* source copies after merging; the input ZIPs are not changed. Merging is heuristic, so review results before using them.
+Choose a folder of ZIP exports, then run the cleaner. It extracts each archive, flattens nested folders into descriptive filenames, copies supported files including EPUB ebooks and supported images, and converts some document and text formats to `.txt`. PowerPoint `.pptx` files are copied unchanged apart from their filenames, because NotebookLM now supports them directly; LibreOffice is not required. Files over the 200 MB limit are skipped and reported. Older `.ppt` files still receive only a best-effort text decode, which may produce unreadable output. It creates per-ZIP conversion reports and an HTML run summary. Optional similar-file merging concatenates related text sources and can remove the *generated* source copies after merging; the input ZIPs are not changed. Merging is heuristic, so review results before using them.
 
 See Google's [supported source types](https://support.google.com/gemininotebook/answer/16215270?hl=en) for current NotebookLM compatibility.
 
@@ -24,7 +24,7 @@ python3 now_cleaner_desktop.py
 python3 clean_now_notebooklm.py --source /path/to/export-zips --merge-similar
 ```
 
-Run `python3 clean_now_notebooklm.py --help` for all options. Omit `--merge-similar` if you want separate output files. The UI has separate merge and overwrite controls; overwrite is off by default.
+Run `python3 clean_now_notebooklm.py --help` for all options. Omit `--merge-similar` if you want separate output files. Supported images are kept by default; uncheck "Keep supported images" in the UI or use `--exclude-images` to omit them. SVGs remain excluded. The UI has separate merge and overwrite controls; overwrite is off by default.
 
 ## Build a local macOS app
 

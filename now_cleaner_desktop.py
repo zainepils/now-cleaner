@@ -35,6 +35,7 @@ class CleanerApp:
         self.output_var = tk.StringVar(value='')
         self.merge_var = tk.BooleanVar(value=True)
         self.overwrite_var = tk.BooleanVar(value=False)
+        self.keep_images_var = tk.BooleanVar(value=True)
 
         self.status_title_var = tk.StringVar(value='Ready')
         self.status_detail_var = tk.StringVar(value='Choose a source folder and click Start Cleaning.')
@@ -135,9 +136,11 @@ class CleanerApp:
         checks = ttk.Frame(parent, style='Card.TFrame')
         checks.grid(row=6, column=0, columnspan=3, sticky='w', pady=(2, 10))
         self.merge_check = ttk.Checkbutton(checks, text='Merge similar files', variable=self.merge_var)
-        self.merge_check.pack(side='left', padx=(0, 18))
+        self.merge_check.grid(row=0, column=0, sticky='w', padx=(0, 18))
         self.overwrite_check = ttk.Checkbutton(checks, text='Replace previous cleaner output', variable=self.overwrite_var)
-        self.overwrite_check.pack(side='left')
+        self.overwrite_check.grid(row=0, column=1, sticky='w')
+        self.keep_images_check = ttk.Checkbutton(checks, text='Keep supported images', variable=self.keep_images_var)
+        self.keep_images_check.grid(row=1, column=0, columnspan=2, sticky='w', pady=(6, 0))
 
         actions = ttk.Frame(parent, style='Card.TFrame')
         actions.grid(row=7, column=0, columnspan=3, sticky='ew', pady=(2, 0))
@@ -268,6 +271,7 @@ class CleanerApp:
         self.output_entry.configure(state=inputs_state)
         self.merge_check.configure(state=inputs_state)
         self.overwrite_check.configure(state=inputs_state)
+        self.keep_images_check.configure(state=inputs_state)
 
     def _compute_paths(self, source_path: Path, output_name_raw: str) -> tuple[Path, Path, Path]:
         output_dir = processor.resolve_output_root(source_path, output_name_raw)
@@ -283,6 +287,8 @@ class CleanerApp:
             cmd.append('--overwrite')
         if merge:
             cmd.append('--merge-similar')
+        if not self.keep_images_var.get():
+            cmd.append('--exclude-images')
         return cmd
 
     def start_run(self) -> None:
