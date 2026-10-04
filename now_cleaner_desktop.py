@@ -20,8 +20,8 @@ class CleanerApp:
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
         self.root.title('NOW Cleaner')
-        self.root.geometry('980x700')
-        self.root.minsize(860, 620)
+        self.root.geometry('1080x780')
+        self.root.minsize(980, 720)
 
         self.proc: subprocess.Popen[str] | None = None
         self.log_queue: queue.Queue[str] = queue.Queue()
@@ -92,11 +92,21 @@ class CleanerApp:
         ttk.Label(header, text='NOW Cleaner', style='Title.TLabel').pack(anchor='w')
         ttk.Label(
             header,
-            text='Clean and merge NOW ZIP exports with one click. Runs locally using your existing script.',
+            text='Keep your course exports organised, review changes and maintain stable NotebookLM source packs.',
             style='Subtitle.TLabel',
         ).pack(anchor='w', pady=(2, 0))
 
-        top_grid = ttk.Frame(root_wrap, style='Root.TFrame')
+        tabs = ttk.Notebook(root_wrap)
+        tabs.pack(fill='both', expand=True, pady=(12, 0))
+        modules_tab = ttk.Frame(tabs, style='Card.TFrame')
+        legacy_tab = ttk.Frame(tabs, style='Root.TFrame')
+        tabs.add(modules_tab, text='Modules & Updates')
+        tabs.add(legacy_tab, text='One-off Cleaner')
+        from now_cleaner.module_ui import ModulePanel
+        self.module_panel = ModulePanel(modules_tab, self.root)
+        self.module_panel.legacy_busy = lambda: self.running
+
+        top_grid = ttk.Frame(legacy_tab, style='Root.TFrame')
         top_grid.pack(fill='x', pady=(12, 10))
         top_grid.columnconfigure(0, weight=3)
         top_grid.columnconfigure(1, weight=2)
@@ -110,7 +120,7 @@ class CleanerApp:
         self._build_settings_card(settings_card)
         self._build_status_card(status_card)
 
-        logs_card = ttk.Frame(root_wrap, style='Card.TFrame', padding=14)
+        logs_card = ttk.Frame(legacy_tab, style='Card.TFrame', padding=14)
         logs_card.pack(fill='both', expand=True)
         self._build_logs_card(logs_card)
 
@@ -292,7 +302,7 @@ class CleanerApp:
         return cmd
 
     def start_run(self) -> None:
-        if self.running:
+        if self.running or self.module_panel.busy:
             return
 
         source_path = Path(self.source_var.get()).expanduser().resolve()
@@ -430,6 +440,9 @@ class CleanerApp:
             messagebox.showinfo('Not found', 'Summary file not found yet.')
 
     def _on_close(self) -> None:
+        if self.module_panel.busy:
+            messagebox.showinfo('Update in progress', 'Wait for the module operation to finish before closing. This protects local commits and Drive upload receipts.')
+            return
         if self.running:
             ok = messagebox.askyesno('NOW Cleaner', 'A run is in progress. Stop it and close the app?')
             if not ok:
@@ -439,6 +452,9 @@ class CleanerApp:
 
 
 def main() -> int:
+    if '--modules' in sys.argv[1:]:
+        from now_cleaner.cli import main as module_main
+        return module_main(sys.argv[sys.argv.index('--modules') + 1:])
     if '--backend' in sys.argv[1:]:
         sys.argv.remove('--backend')
         return processor.main()

@@ -160,5 +160,42 @@ class CleanerTests(unittest.TestCase):
             self.assertEqual("--exclude-images" in command, not keep)
 
 
+class PrivacyAndReplacementTests(unittest.TestCase):
+    setUp = CleanerTests.setUp
+    add_zip = CleanerTests.add_zip
+    run_cleaner = CleanerTests.run_cleaner
+
+    def test_cache_report_only_contains_current_run(self):
+        import json
+        cache = self.root / '.config' / 'now-cleaner'
+        cache.mkdir(parents=True)
+        (cache / 'zip_name_cache.json').write_text(json.dumps({'Unrelated private filename': 'Other project'}))
+        self.add_zip('Current module.zip', {'note.txt': 'sample'})
+        result = self.run_cleaner()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        report = (self.root / 'source - Cleaned and ready.' / 'SUMMARY' / '_zip_name_cache.txt').read_text()
+        self.assertNotIn('Unrelated', report)
+        self.assertIn('Current module', report)
+
+    def test_changed_output_directory_is_not_deleted(self):
+        self.add_zip('One.zip', {'note.txt': 'sample'})
+        self.assertEqual(self.run_cleaner().returncode, 0)
+        output = self.root / 'source - Cleaned and ready.'
+        retained = self.root / 'previous-output'
+        original_pipeline = cleaner.run_pipeline
+        def replace_output(*args):
+            original_pipeline(*args)
+            output.rename(retained)
+            output.mkdir()
+            (output / 'precious.txt').write_text('must survive')
+        args = [str(SCRIPT), '--source', str(self.source), '--overwrite']
+        with mock.patch.object(sys, 'argv', args), mock.patch.object(cleaner, 'load_api_key', return_value=''), \
+             mock.patch.object(cleaner, 'run_pipeline', side_effect=replace_output), \
+             mock.patch.dict(os.environ, {'HOME': str(self.root)}):
+            self.assertEqual(cleaner.main(), 1)
+        self.assertEqual((output / 'precious.txt').read_text(), 'must survive')
+        self.assertTrue((retained / 'SUMMARY' / 'SUMMARY.html').is_file())
+
+
 if __name__ == "__main__":
     unittest.main()

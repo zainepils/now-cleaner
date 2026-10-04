@@ -21,3 +21,8 @@ dist/
 *api_key*
 *secret*
 *credential*
+*.sqlite*
+*.db
+client*.json
+token*.json
+module-data/

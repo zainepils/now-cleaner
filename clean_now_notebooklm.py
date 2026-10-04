@@ -47,6 +47,9 @@ from html.parser import HTMLParser
 from pathlib import Path
 from typing import Iterable, Optional
 import xml.etree.ElementTree as ET
+from now_cleaner.safety import safe_extract, bounded_read, validate_archive
+
+MAX_CONVERTED_CHARS = 20_000_000
 
 # Broad supported set used for local NotebookLM workflows.
 SUPPORTED_NOTEBOOKLM_EXTS = {
@@ -273,11 +276,6 @@ def parse_args() -> argparse.Namespace:
         help="Replace a previous NOW Cleaner output after a successful rebuild",
     )
     parser.add_argument(
-        "--openai-api-key",
-        default="",
-        help="OpenAI API key (default: OPENAI_API_KEY env var, then ~/.config/now-cleaner/openai_api_key)",
-    )
-    parser.add_argument(
         "--openai-model",
         default="gpt-4.1-mini",
         help="OpenAI model used to clean zip names",
@@ -378,6 +376,8 @@ def is_within_notebooklm_size_limit(path: Path) -> bool:
 
 
 def read_text_file(path: Path) -> str:
+    if path.stat().st_size > 20_000_000:
+        raise ValueError('Text file exceeds the 20 MB processing budget')
     encodings = ["utf-8", "utf-16", "utf-8-sig", "cp1252", "latin-1"]
     for enc in encodings:
         try:
@@ -406,7 +406,7 @@ def extract_docx_text(path: Path) -> str:
         )
         chunks: list[str] = []
         for name in xml_names:
-            data = zf.read(name)
+            data = bounded_read(zf, name)
             root = ET.fromstring(data)
             for el in root.iter():
                 tag = el.tag
@@ -438,7 +438,7 @@ def extract_pptx_text(path: Path) -> str:
         )
         lines: list[str] = []
         for i, slide in enumerate(slides, start=1):
-            data = zf.read(slide)
+            data = bounded_read(zf, slide)
             root = ET.fromstring(data)
             texts = [el.text for el in root.iter() if el.tag.endswith("}t") and el.text]
             if texts:
@@ -450,9 +450,10 @@ def extract_pptx_text(path: Path) -> str:
 
 def extract_xlsx_text(path: Path) -> str:
     with zipfile.ZipFile(path) as zf:
+        validate_archive(zf, nested=True)
         shared_strings: list[str] = []
         if "xl/sharedStrings.xml" in zf.namelist():
-            root = ET.fromstring(zf.read("xl/sharedStrings.xml"))
+            root = ET.fromstring(bounded_read(zf, "xl/sharedStrings.xml"))
             for si in root.iter():
                 if si.tag.endswith("}si"):
                     parts = [t.text or "" for t in si.iter() if t.tag.endswith("}t")]
@@ -464,9 +465,10 @@ def extract_xlsx_text(path: Path) -> str:
         )
 
         out_lines: list[str] = []
+        output_chars = 0
         for sheet in sheet_names:
             out_lines.append(f"[{Path(sheet).name}]")
-            root = ET.fromstring(zf.read(sheet))
+            root = ET.fromstring(bounded_read(zf, sheet))
             for row in root.iter():
                 if not row.tag.endswith("}row"):
                     continue
@@ -489,6 +491,9 @@ def extract_xlsx_text(path: Path) -> str:
                         v = next((x for x in c if x.tag.endswith("}v")), None)
                         if v is not None and v.text:
                             val = v.text
+                    output_chars += len(val) + 1
+                    if output_chars > MAX_CONVERTED_CHARS:
+                        raise ValueError('Converted spreadsheet exceeds text expansion budget')
                     vals.append(val)
                 if any(v.strip() for v in vals):
                     out_lines.append("\t".join(vals).rstrip())
@@ -507,14 +512,17 @@ def strip_rtf_to_text(rtf_text: str) -> str:
 
 def extract_epub_text(path: Path) -> str:
     with zipfile.ZipFile(path) as zf:
+        validate_archive(zf, nested=True)
         html_files = sorted(
             n for n in zf.namelist() if n.lower().endswith((".html", ".htm", ".xhtml"))
         )
         chunks: list[str] = []
         for name in html_files:
             try:
-                data = zf.read(name)
+                data = bounded_read(zf, name)
                 text = data.decode("utf-8", errors="ignore")
+            except ValueError:
+                raise
             except Exception:
                 continue
             parser = HTMLToTextParser()
@@ -763,7 +771,11 @@ def detect_external_downloads_from_original(src: Path, rel: Path) -> list[LinkDe
     if not is_probably_text_file(src):
         return []
     try:
-        raw = read_text_file(src)
+        if src.stat().st_size > 20_000_000:
+            with src.open('rb') as stream:
+                raw = stream.read(20_000_000).decode('utf-8', errors='replace')
+        else:
+            raw = read_text_file(src)
     except Exception:
         return []
     if not raw.strip():
@@ -802,7 +814,7 @@ def process_zip(zip_path: Path, output_root: Path, zip_label: str, exclude_image
     with tempfile.TemporaryDirectory(prefix="now_extract_") as td:
         extract_dir = Path(td)
         with zipfile.ZipFile(zip_path, "r") as zf:
-            zf.extractall(extract_dir)
+            safe_extract(zf, extract_dir)
 
         for src in collect_files(extract_dir):
             rel = src.relative_to(extract_dir)
@@ -828,7 +840,8 @@ def process_zip(zip_path: Path, output_root: Path, zip_label: str, exclude_image
                 out = unique_path(output_root / f"{base}{ext}")
                 shutil.copy2(src, out)
                 if is_within_notebooklm_size_limit(out):
-                    results.append(FileResult(source=rel, output=out, action="copied"))
+                    note = 'Link detection limited to first 20 MB' if src.stat().st_size > 20_000_000 and ext in {'.txt', '.md', '.markdown', '.csv'} else ''
+                    results.append(FileResult(source=rel, output=out, action="copied", note=note))
                 else:
                     out.unlink(missing_ok=True)
                     results.append(
@@ -1089,6 +1102,8 @@ def merge_similar_output_files(
         for p in sorted(output_root.iterdir())
         if p.is_file() and p.suffix.lower() in MERGEABLE_EXTS
     ]
+    if len(candidates) > 200 or sum(p.stat().st_size for p in candidates) > 20_000_000:
+        raise ValueError('One-off merging exceeds its 200-file/20 MB budget; use module packs instead')
     merged_groups: list[MergeGroupSummary] = []
     used_paths: set[Path] = set()
 
@@ -1175,6 +1190,7 @@ def write_merge_report(
         "",
     ]
 
+
     if not groups:
         lines.append("No merge groups found.")
     else:
@@ -1216,6 +1232,12 @@ def write_report(
         f"Skipped: {len(skipped)}",
         "",
     ]
+
+    notes = [r for r in results if r.note and r.action == 'copied']
+    if notes:
+        lines.append('Processing notes:')
+        lines.extend(f'- {r.source} :: {r.note}' for r in notes)
+        lines.append('')
 
     if detections:
         lines.append("Detections:")
@@ -1750,6 +1772,7 @@ def run_pipeline(args: argparse.Namespace, source_dir: Path, output_root: Path, 
     cache_dir.mkdir(parents=True, exist_ok=True)
     cache_path = cache_dir / "zip_name_cache.json"
     name_cache = load_name_cache(cache_path)
+    current_cache = {}
 
     print(f"Source: {source_dir}")
     print(f"Output: {final_root}")
@@ -1761,6 +1784,7 @@ def run_pipeline(args: argparse.Namespace, source_dir: Path, output_root: Path, 
         print(f"[{idx}/{len(zip_files)}] Processing: {zip_path.name}")
         try:
             zip_label, label_source = get_clean_zip_label(zip_path, api_key, args.openai_model, name_cache)
+            current_cache[zip_path.stem] = zip_label
             save_name_cache(cache_path, name_cache)
             results, detections = process_zip(zip_path, output_root, zip_label, exclude_images=args.exclude_images)
             # Deduplicate detections across all zips by URL.
@@ -1844,7 +1868,7 @@ def run_pipeline(args: argparse.Namespace, source_dir: Path, output_root: Path, 
         merge_min_group=args.merge_min_group,
         keep_merged_sources=args.keep_merged_sources,
     )
-    write_name_cache_txt(output_root / "SUMMARY" / "_zip_name_cache.txt", name_cache)
+    write_name_cache_txt(output_root / "SUMMARY" / "_zip_name_cache.txt", current_cache)
     print(f"Summary prepared: {summary_path.name}")
 
 
@@ -1879,7 +1903,10 @@ def main() -> int:
             print(f"Refusing to overwrite an unrecognised folder: {output_root}\nMove it aside manually first.", file=sys.stderr)
             return 1
 
-    api_key = load_api_key(args.openai_api_key)
+    previous_identity = None
+    if output_root.exists():
+        previous_identity = (output_root.stat().st_dev, output_root.stat().st_ino)
+    api_key = load_api_key('')
     with tempfile.TemporaryDirectory(prefix=".now-cleaner-", dir=source_dir.parent) as staging_name:
         staging = Path(staging_name)
         try:
@@ -1892,8 +1919,16 @@ def main() -> int:
         backup = source_dir.parent / f".now-cleaner-backup-{uuid4().hex}"
         had_previous = output_root.exists()
         try:
+            if output_root.is_symlink():
+                raise OSError('Output was replaced by a symlink during processing')
+            identity = (output_root.stat().st_dev, output_root.stat().st_ino) if had_previous else None
+            if identity != previous_identity:
+                raise OSError('Output directory changed during processing')
             if had_previous:
                 output_root.rename(backup)
+                moved_identity = (backup.stat().st_dev, backup.stat().st_ino)
+                if moved_identity != previous_identity:
+                    raise OSError('Output directory identity changed during replacement; backup retained')
             staging.rename(output_root)
         except OSError as exc:
             if had_previous and backup.exists() and not output_root.exists():
@@ -1901,7 +1936,8 @@ def main() -> int:
             print(f"Could not publish output: {exc}", file=sys.stderr)
             return 1
         if had_previous:
-            shutil.rmtree(backup)
+            # Retain old output rather than recursively deleting a path another local actor can substitute.
+            print(f'Previous output retained: {backup}')
     print(f"Summary: {output_root / 'SUMMARY' / 'SUMMARY.html'}")
     print("Done.")
     return 0
