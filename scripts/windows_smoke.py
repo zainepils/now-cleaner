@@ -1,5 +1,6 @@
 """Exercise the actual frozen executable with fictional content only."""
 import json
+from contextlib import closing
 import os
 import sqlite3
 import subprocess
@@ -22,13 +23,13 @@ with tempfile.TemporaryDirectory() as folder:
         subprocess.run([str(exe), *map(str, args)], check=True, timeout=90, env=env)
     prefix = ['--modules', '--state-dir', state]
     run(*prefix, 'create', 'Example', '--destination', root / 'output')
-    with sqlite3.connect(state / 'inventory.sqlite3') as db:
+    with closing(sqlite3.connect(state / 'inventory.sqlite3')) as db:
         module = db.execute('SELECT id FROM modules').fetchone()[0]
     run(*prefix, 'preview', module, archive)
     token = next((state / 'previews').iterdir()).name
     run(*prefix, 'prepare', token)
     run(*prefix, 'apply', token, '--approve-warnings')
-    with sqlite3.connect(state / 'inventory.sqlite3') as db:
+    with closing(sqlite3.connect(state / 'inventory.sqlite3')) as db:
         snapshot = json.loads(db.execute('SELECT snapshot FROM revisions').fetchone()[0])
     assert list((Path(snapshot['revision_path']) / 'Latest Update').iterdir())
     run('--backend', '--source', source)
