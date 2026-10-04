@@ -9,6 +9,24 @@ WINDOWS = sys.platform == 'win32'
 FONT_FAMILY = 'Segoe UI' if WINDOWS else 'Avenir Next'
 
 
+def documents_folder():
+    if sys.platform == 'win32':
+        import ctypes
+        buffer = ctypes.create_unicode_buffer(32768)
+        if ctypes.windll.shell32.SHGetFolderPathW(None, 5, None, 0, buffer) != 0:
+            raise OSError('Windows Documents folder is unavailable')
+        return Path(buffer.value)
+    return Path.home() / 'Documents'
+
+
+def hide_path(path):
+    if sys.platform == 'win32':
+        import ctypes
+        attributes = ctypes.windll.kernel32.GetFileAttributesW(str(path))
+        if attributes == -1 or not ctypes.windll.kernel32.SetFileAttributesW(str(path), attributes | 2):
+            raise OSError('Could not hide app history folder')
+
+
 def is_link(path):
     return path.is_symlink() or getattr(path, 'is_junction', lambda: False)()
 

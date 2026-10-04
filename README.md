@@ -63,18 +63,26 @@ Pack generation caps source words, characters, pages and bytes and splits oversi
 
 ### Local layout
 
-Each module has its own marked folder and immutable revision directories. Stable folder links point to the committed revision:
+This simplified layout is available in source builds after v0.3.1. The installers
+linked above keep the previous layout until the next release.
+
+New modules default to this layout (you can choose another parent folder in module settings):
 
 ```text
-Module folder/
-  Current Files/       # original documents with stable flattened names
-  Packs/               # complete current NotebookLM-ready packs
-  Latest Update/       # actual copies of new/changed packs
-  Reports/             # checklist and update metadata
-  revisions/           # recoverable previous versions
+Documents/
+  NOW Cleaner/
+    My Modules/
+      Module Name/
+        Course Files/              # organised original documents
+        NotebookLM-ready Files/    # all current upload-ready packs
+        Latest Update/             # only new/changed upload-ready packs
 ```
 
-The folder links are managed by the app; files inside Latest Update are real copies, not file shortcuts. Local-only uploads still require manually replacing changed NotebookLM sources. The checklist separates new, replacement and retired packs. History stores local revisions, not verified NotebookLM state.
+History, reports and technical files stay in a hidden `.history` directory; use **More > Update history** or **Open update instructions** to access them. Mac uses app-managed folder links; Windows uses real folders, without administrator permissions or Developer Mode. Windows refuses to replace folders you have edited outside the app: move your edits elsewhere first. This uses additional disk space on Windows. Treat these folders as generated output and keep personal edits elsewhere.
+
+Existing modules keep their original paths and layout; no course files are moved automatically. Duplicate module names receive a short suffix. Renaming a module changes its display name, not its existing folder path. On Windows, the default respects your configured Documents location, including redirected Documents folders. macOS may ask for Documents access; Windows Controlled Folder Access can block writes. A custom parent folder can be selected if needed. Documents may be synced by your own iCloud/OneDrive settings; NOW Cleaner does not configure that syncing.
+
+Local-only uploads still require manually replacing changed NotebookLM sources. The checklist separates new, replacement and retired packs. History stores local revisions, not verified NotebookLM state.
 
 ## Drive integration
 

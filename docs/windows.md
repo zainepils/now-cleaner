@@ -19,7 +19,10 @@ choose a ZIP or a folder containing ZIPs, review changes and save the update. Us
 **Open NotebookLM-ready files** for the first upload and **Open latest upload files**
 for later updates. Choose **Add more files** when new course downloads arrive.
 Windows does not need symlinks, Developer Mode or administrator privileges for these actions.
-The folders live inside saved revision directories rather than top-level Mac folder links.
+New modules use real top-level Course Files, NotebookLM-ready Files and Latest Update
+folders, with history hidden under `.history`. Existing modules retain their original
+revision-folder layout. The new layout is in source builds after v0.3.1; the v0.3.1
+download retains the older layout until the next installer release.
 
 Choose a destination on the same drive as your user profile for this preview; cross-drive
 module destinations are not supported. Previous versions remain available through History.

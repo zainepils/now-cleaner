@@ -236,12 +236,81 @@ class ModuleTests(unittest.TestCase):
         if WINDOWS:
             restarted = Store(self.store.state)
             restarted.publish_links(self.module['id'])
-            self.assertEqual(restarted.folder_path(self.module['id'], 'Current Files'), Path(result['revision_path']) / 'Current Files')
+            self.assertEqual(restarted.folder_path(self.module['id'], 'Current Files'), Path(self.module['root']) / 'Course Files')
             return
-        link = Path(self.module['root']) / 'Current Files'
+        link = self.store.folder_path(self.module['id'], 'Current Files')
         link.unlink()
         Store(self.store.state).publish_links(self.module['id'])
         self.assertEqual(link.resolve(), Path(result['revision_path']) / 'Current Files')
+
+    def test_friendly_layout_and_duplicate_names(self):
+        result = self.import_files({'Lecture/a.txt': 'a'})
+        root = Path(self.module['root'])
+        self.assertEqual(root.name, 'Marketing')
+        self.assertEqual(Path(result['revision_path']).parent, root / '.history')
+        for name in ('Course Files', 'NotebookLM-ready Files', 'Latest Update'):
+            self.assertTrue((root / name).is_dir())
+        self.assertFalse((root / 'Reports').exists())
+        self.assertFalse((root / 'revisions').exists())
+        other = self.store.save_module('Marketing', root.parent)
+        self.assertNotEqual(other['root'], self.module['root'])
+
+    def test_old_module_layout_remains_compatible(self):
+        config = dict(self.module)
+        config.pop('layout')
+        with self.store.connect() as conn:
+            conn.execute('UPDATE modules SET config=? WHERE id=?', (json.dumps(config), config['id']))
+        result = self.import_files({'Lecture/a.txt': 'a'})
+        self.assertEqual(Path(result['revision_path']).parent, Path(config['root']) / 'revisions')
+        self.assertTrue(self.store.folder_path(config['id'], 'Packs').is_dir())
+
+    def test_windows_friendly_folders_update_without_symlinks(self):
+        from now_cleaner import platform_support as platform
+        first = self.import_files({'Lecture/a.txt': 'a'})
+        # Start from the Windows presentation, using a real imported revision.
+        for name in ('Course Files', 'NotebookLM-ready Files', 'Latest Update'):
+            path = Path(self.module['root']) / name
+            if path.is_symlink():
+                path.unlink()
+        with mock.patch.object(platform, 'WINDOWS', True), mock.patch.object(Path, 'symlink_to', side_effect=AssertionError('No symlinks')):
+            self.store.publish_links(self.module['id'])
+            course = self.store.folder_path(self.module['id'], 'Current Files')
+            self.assertFalse(course.is_symlink())
+            self.assertEqual(len([p for p in course.iterdir() if not p.name.startswith('.')]), 1)
+            self.store.publish_links(self.module['id'])
+            next(p for p in course.iterdir() if not p.name.startswith('.')).write_text('my edit')
+            with self.assertRaisesRegex(ValueError, 'edited outside'):
+                self.store.publish_links(self.module['id'])
+        self.assertTrue(Path(first['revision_path']).is_dir())
+
+    def test_windows_folder_publish_rolls_back_failed_replacement(self):
+        import shutil
+        import os
+        from now_cleaner import platform_support as platform
+        first = self.import_files({'Lecture/a.txt': 'a'})
+        for name in ('Course Files', 'NotebookLM-ready Files', 'Latest Update'):
+            path = Path(self.module['root']) / name
+            if path.is_symlink():
+                path.unlink()
+        with mock.patch.object(platform, 'WINDOWS', True):
+            self.store.publish_links(self.module['id'])
+            next_revision = self.root / 'next-revision'
+            shutil.copytree(first['revision_path'], next_revision)
+            next((next_revision / 'Current Files').iterdir()).write_text('updated')
+            snapshot = dict(first, revision_path=str(next_revision))
+            replace = os.replace
+            def fail_pack(source, target):
+                if Path(source).name.startswith('.publish-') and Path(target).name == 'NotebookLM-ready Files':
+                    raise OSError('synthetic interrupted publish')
+                return replace(source, target)
+            with mock.patch.object(self.store, 'snapshot', return_value=snapshot), mock.patch('now_cleaner.store.os.replace', side_effect=fail_pack):
+                with self.assertRaisesRegex(OSError, 'interrupted publish'):
+                    self.store.publish_links(self.module['id'])
+            course = self.store.folder_path(self.module['id'], 'Current Files')
+            self.assertEqual(next(p for p in course.iterdir() if not p.name.startswith('.')).read_text(), 'a')
+            self.store.publish_links(self.module['id'])
+            self.assertFalse(list(Path(self.module['root']).glob('.publish-*')))
+            self.assertFalse(list(Path(self.module['root']).glob('.previous-*')))
 
 
 class SafetyTests(unittest.TestCase):

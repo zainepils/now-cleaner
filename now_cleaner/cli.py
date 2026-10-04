@@ -4,7 +4,7 @@ import argparse
 import json
 from pathlib import Path
 
-from .store import Store
+from .store import Store, default_destination
 from . import engine
 
 
@@ -15,7 +15,7 @@ def main(argv=None):
     commands.add_parser('list')
     create = commands.add_parser('create')
     create.add_argument('name')
-    create.add_argument('--destination', type=Path, default=Path.home() / 'Documents' / 'NOW Cleaner')
+    create.add_argument('--destination', type=Path, default=default_destination())
     create.add_argument('--mode', choices=['local', 'drive'], default='local')
     create.add_argument('--notebook', default='')
     create.add_argument('--limit', type=int, default=50)

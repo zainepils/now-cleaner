@@ -4,6 +4,8 @@ import contextlib
 import json
 import os
 import sqlite3
+import shutil
+import hashlib
 from send2trash import send2trash
 from pathlib import Path
 from uuid import uuid4
@@ -11,6 +13,26 @@ from urllib.parse import urlparse
 
 import clean_now_notebooklm as legacy
 from . import platform_support as platform
+
+
+def default_destination() -> Path:
+    return platform.documents_folder() / 'NOW Cleaner' / 'My Modules'
+
+
+PUBLIC_FOLDERS = {'Current Files': 'Course Files', 'Packs': 'NotebookLM-ready Files',
+                  'Latest Update': 'Latest Update'}
+
+
+def folder_manifest(folder: Path) -> dict:
+    result = {}
+    for path in folder.iterdir():
+        if path.name == '.now-files.json':
+            continue
+        if platform.is_link(path) or not path.is_file():
+            raise ValueError('Module output contains unexpected files or folders; move your additions aside first')
+        with path.open('rb') as stream:
+            result[path.name] = hashlib.file_digest(stream, 'sha256').hexdigest()
+    return result
 
 
 def default_state() -> Path:
@@ -79,7 +101,9 @@ class Store:
         if platform.WINDOWS and parent.drive.casefold() != self.state.drive.casefold():
             raise ValueError('For this preview, choose a save folder on the same drive as your Windows user profile.')
         parent.mkdir(parents=True, exist_ok=True)
-        root = Path(previous['root']) if previous else parent / f'{legacy.sanitize_name(name)}-{module_id[:8]}'
+        root = Path(previous['root']) if previous else parent / legacy.sanitize_name(name)
+        if not previous and root.exists():
+            root = parent / f'{legacy.sanitize_name(name)}-{module_id[:8]}'
         if previous and root.parent != parent:
             raise ValueError('Changing destinations is not supported; create a new module instead')
         if platform.is_link(root):
@@ -90,6 +114,7 @@ class Store:
         root.mkdir(exist_ok=True)
         marker.write_text(json.dumps({'id': module_id}), encoding='utf-8')
         config = dict(id=module_id, name=name, root=str(root), notebook=notebook.strip(), mode=mode, limit=limit, reserved=reserved)
+        config['layout'] = previous.get('layout', 1) if previous else 2
         with self.connect() as conn:
             conn.execute('INSERT INTO modules VALUES(?,?,NULL) ON CONFLICT(id) DO UPDATE SET config=excluded.config',
                          (module_id, json.dumps(config)))
@@ -209,6 +234,27 @@ class Store:
             finally:
                 fcntl.flock(stream, fcntl.LOCK_UN)
 
+    def revisions_path(self, module_id: str) -> Path:
+        module = self.module(module_id)
+        return Path(module['root']) / ('.history' if module.get('layout', 1) == 2 else 'revisions')
+
+    def validate_public_folders(self, module_id: str) -> None:
+        module = self.module(module_id)
+        names = PUBLIC_FOLDERS.values() if module.get('layout', 1) == 2 else ('Current Files', 'Packs', 'Latest Update', 'Reports')
+        for name in names:
+            path = Path(module['root']) / name
+            if module.get('layout', 1) == 2 and platform.WINDOWS:
+                if platform.is_link(path):
+                    raise ValueError(f'{name} is not an app-managed folder')
+                if path.exists():
+                    marker = path / '.now-files.json'
+                    if not marker.is_file() or platform.is_link(marker):
+                        raise ValueError(f'{name} is not an app-managed folder; move it aside')
+                    if json.loads(marker.read_text()) != folder_manifest(path):
+                        raise ValueError(f'{name} was edited outside NOW Cleaner; move your edits aside before saving')
+            elif path.exists() and not path.is_symlink():
+                raise ValueError(f'{name} is not an app-managed link; move it aside')
+
     def publish_links(self, module_id: str) -> None:
         module = self.module(module_id)
         snapshot = self.snapshot(module_id)
@@ -217,11 +263,50 @@ class Store:
         root = Path(module['root'])
         if platform.is_link(root) or json.loads((root / '.now-module.json').read_text()).get('id') != module_id:
             raise ValueError('Module folder ownership changed')
+        self.validate_public_folders(module_id)
+        if platform.WINDOWS and module.get('layout', 1) == 2:
+            # Real folders work without Windows Developer Mode or elevated privileges.
+            if all((root / visible).is_dir() and
+                   folder_manifest(root / visible) == folder_manifest(Path(snapshot['revision_path']) / internal)
+                   for internal, visible in PUBLIC_FOLDERS.items()):
+                return
+            staged, replaced = [], []
+            try:
+                for internal, visible in PUBLIC_FOLDERS.items():
+                    target = root / visible
+                    temp = root / f'.publish-{uuid4().hex}'
+                    backup = root / f'.previous-{uuid4().hex}'
+                    staged.append((target, temp, backup))
+                    shutil.copytree(Path(snapshot['revision_path']) / internal, temp)
+                    marker = temp / '.now-files.json'
+                    marker.write_text(json.dumps(folder_manifest(temp)), encoding='utf-8')
+                    platform.hide_path(marker)
+                for target, temp, backup in staged:
+                    if target.exists():
+                        os.replace(target, backup)
+                    replaced.append((target, backup))
+                    os.replace(temp, target)
+            except Exception:
+                for target, backup in reversed(replaced):
+                    if target.exists():
+                        shutil.rmtree(target)
+                    if backup.exists():
+                        os.replace(backup, target)
+                raise
+            finally:
+                for _, temp, _ in staged:
+                    if temp.exists():
+                        shutil.rmtree(temp)
+            for _, _, backup in staged:
+                if backup.exists():
+                    shutil.rmtree(backup)
+            return
         if platform.WINDOWS:
             # UI opens the committed revision directly: no admin/Developer Mode symlinks.
             return
-        for name in ('Current Files', 'Packs', 'Latest Update', 'Reports'):
-            link = root / name
+        names = PUBLIC_FOLDERS if module.get('layout', 1) == 2 else {n: n for n in ('Current Files', 'Packs', 'Latest Update', 'Reports')}
+        for name, visible in names.items():
+            link = root / visible
             if link.exists() and not link.is_symlink():
                 raise ValueError(f'{name} is not an app-managed link; move it aside')
             target = Path(snapshot['revision_path']) / name
@@ -233,6 +318,13 @@ class Store:
         if name not in ('Current Files', 'Packs', 'Latest Update', 'Reports'):
             raise ValueError('Unknown module folder')
         module = self.module(module_id)
+        if module.get('layout', 1) == 2:
+            if name == 'Reports':
+                snapshot = self.snapshot(module_id)
+                if not snapshot.get('revision_path'):
+                    raise ValueError('Save an update first')
+                return Path(snapshot['revision_path']) / name
+            return Path(module['root']) / PUBLIC_FOLDERS[name]
         if platform.WINDOWS:
             snapshot = self.snapshot(module_id)
             if not snapshot.get('revision_path'):

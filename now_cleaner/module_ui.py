@@ -8,7 +8,7 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
-from .store import Store
+from .store import Store, default_destination
 from . import engine
 from . import platform_support as platform
 
@@ -308,7 +308,7 @@ class ModulePanel:
                 try:
                     self.store.publish_links(module['id'])
                 except Exception:
-                    self.status.set('Folder links need repair. Check module destination permissions.')
+                    self.status.set('Output folders need repair. Check folder permissions or move any personal edits aside.')
 
     def invalidate(self):
         self.phase = 'import'
@@ -338,7 +338,7 @@ class ModulePanel:
         advanced = ttk.Frame(pane)
         values = {}
         fields = [('name', 'Module name', current['name'] if current else ''),
-                  ('destination', 'Save files inside this folder', str(Path(current['root']).parent) if current else str(Path.home() / 'Documents' / 'NOW Cleaner')),
+                  ('destination', 'Save files inside this folder', str(Path(current['root']).parent) if current else str(default_destination())),
                   ('notebook', 'Notebook link (optional)', current['notebook'] if current else ''),
                   ('limit', 'Notebook source limit', str(current['limit']) if current else '50'),
                   ('reserved', 'NotebookLM spaces kept free for your own uploads', str(current['reserved']) if current else '15')]
@@ -792,7 +792,7 @@ class ModulePanel:
             listing.insert('end', row['created'] + '  [' + row['id'][:8] + ']')
         def open_revision():
             if listing.curselection():
-                platform.open_path(Path(module['root']) / 'revisions' / rows[listing.curselection()[0]]['id'])
+                platform.open_path(self.store.revisions_path(module['id']) / rows[listing.curselection()[0]]['id'])
         ttk.Button(dialog, text='Open Selected Revision', command=open_revision).pack(pady=(0, 15))
 
     def retired_sources(self):

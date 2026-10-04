@@ -90,8 +90,8 @@ if not windows:
     icon='assets/now-cleaner.icns',
     bundle_identifier='com.zainepils.now-cleaner',
     info_plist={
-        'CFBundleShortVersionString': '0.3.1',
-        'CFBundleVersion': '4',
+        'CFBundleShortVersionString': '0.3.2',
+        'CFBundleVersion': '5',
         'LSMinimumSystemVersion': '11.0',
     },
 )

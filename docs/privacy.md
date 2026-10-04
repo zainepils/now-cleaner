@@ -44,8 +44,13 @@ user-folder permissions, not POSIX permission settings or custom app-configured 
   and identifier, and the path to the selected OAuth client file.
 - The same Application Support directory: staged exports, original content and
   prepared previews, plus per-module lock files. Previews are not automatically pruned.
-- The module destination (by default under `~/Documents/NOW Cleaner`): originals,
+- The module destination (new modules default to `Documents/NOW Cleaner/My Modules`): originals,
   current upload packs, latest changes, reports and recoverable previous revisions.
+  The three visible folders are Course Files, NotebookLM-ready Files and Latest Update;
+  technical history/reports are hidden under `.history`, accessible through the app.
+  Existing modules retain their older layout. Your own iCloud/OneDrive settings may sync
+  Documents; NOW Cleaner does not enable or manage that syncing. macOS can request
+  Documents access; Windows security settings can block writes.
 - One-off outputs: cleaned files and reports containing paths, filenames, counts and
   conversion/link information. Replaced outputs have retained local backups.
 - `~/.config/now-cleaner/zip_name_cache.json`: raw ZIP names and cleaned labels for

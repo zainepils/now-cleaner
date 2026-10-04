@@ -229,7 +229,7 @@ def apply(store: Store, token: str, log=print) -> dict:
         from .platform_support import is_link
         if is_link(root) or json.loads((root / '.now-module.json').read_text()).get('id') != module['id']:
             raise ValueError('Module destination ownership changed')
-        final = root / 'revisions' / result['revision']
+        final = store.revisions_path(module['id']) / result['revision']
         stage = directory / 'prepared'
         if not stage.exists() and final.is_dir():
             stage = final
@@ -243,12 +243,15 @@ def apply(store: Store, token: str, log=print) -> dict:
                 raise ValueError('Pack changed after review')
             if pack['id'] in result['changed'] and digest(stage / 'Latest Update' / pack['filename']) != pack['hash']:
                 raise ValueError('Upload copy changed after review')
-        for name in ('Current Files', 'Packs', 'Latest Update', 'Reports'):
-            path = root / name
-            if path.exists() and not path.is_symlink():
-                raise ValueError(f'{name} is not an app-managed link')
-        revisions = root / 'revisions'
+        store.validate_public_folders(module['id'])
+        revisions = store.revisions_path(module['id'])
+        if is_link(revisions):
+            raise ValueError('Update history cannot be a symlink')
         revisions.mkdir(exist_ok=True)
+        from .platform_support import hide_path
+        if module.get('layout', 1) == 2:
+            hide_path(revisions)
+            hide_path(root / '.now-module.json')
         final = revisions / result['revision']
         if stage != final:
             os.replace(stage, final)

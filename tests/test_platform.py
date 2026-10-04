@@ -1,4 +1,5 @@
 import os
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -6,10 +7,14 @@ from unittest import mock
 
 import clean_now_notebooklm as legacy
 from now_cleaner import platform_support as platform, safety
-from now_cleaner.store import Store, default_state
+from now_cleaner.store import Store, default_state, default_destination
 
 
 class PlatformTests(unittest.TestCase):
+    def test_destination_uses_configured_documents(self):
+        with mock.patch.object(platform, 'documents_folder', return_value=Path('/example/Documents')):
+            self.assertEqual(default_destination(), Path('/example/Documents/NOW Cleaner/My Modules'))
+
     def test_notebook_url_uses_default_browser(self):
         with mock.patch.object(platform.webbrowser, 'open') as default:
             platform.open_url('https://notebooklm.google.com/')
@@ -44,6 +49,9 @@ class PlatformTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             store = Store(Path(folder) / 'state')
             module = store.save_module('Example', Path(folder) / 'output')
+            module.pop('layout')
+            with store.connect() as conn:
+                conn.execute('UPDATE modules SET config=? WHERE id=?', (json.dumps(module), module['id']))
             snapshot = {'revision': 'example', 'revision_path': str(Path(module['root']) / 'revisions/example')}
             with mock.patch.object(platform, 'WINDOWS', True), mock.patch.object(store, 'snapshot', return_value=snapshot), \
                  mock.patch.object(Path, 'symlink_to', side_effect=AssertionError('No Windows symlinks')):
