@@ -99,6 +99,8 @@ The result is `dist/NOW Cleaner.app`. Python and libraries are bundled; LibreOff
 
 ```sh
 .venv/bin/python -m unittest discover -s tests -v
+# Optional native GUI checks on macOS:
+NOW_CLEANER_UI_TESTS=1 .venv/bin/python -m unittest discover -s tests -v
 python3 scripts/make_demo.py /tmp/now-cleaner-demo
 ```
 

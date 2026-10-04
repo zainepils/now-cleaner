@@ -26,6 +26,7 @@ class ModulePanel:
         self.decisions = {}
         self.modules = []
         self.buttons = []
+        self.phase = 'import'
         self.frame = ttk.Frame(parent, style='Card.TFrame', padding=18)
         self.frame.pack(fill='both', expand=True)
         self.selected = tk.StringVar()
@@ -38,44 +39,62 @@ class ModulePanel:
         self.root.after(120, self.poll)
 
     def button(self, parent, text, command, primary=False):
-        btn = ttk.Button(parent, text=text, command=command, style='Primary.TButton' if primary else 'Secondary.TButton')
+        btn = tk.Button(parent, text=text, command=command, font=('Avenir Next', 12, 'bold' if primary else 'normal'),
+                        bg='#176b62' if primary else '#edf3f2', fg='#ffffff' if primary else '#23443f',
+                        activebackground='#12584f' if primary else '#dce9e6', activeforeground='#ffffff' if primary else '#183b35',
+                        disabledforeground='#819490', relief='flat', borderwidth=0, highlightthickness=0,
+                        padx=18, pady=10, cursor='hand2')
         self.buttons.append(btn)
         return btn
 
     def _build(self):
         row = ttk.Frame(self.frame, style='Card.TFrame')
         row.pack(fill='x')
-        ttk.Label(row, text='Your Modules', style='SectionTitle.TLabel').pack(side='left', padx=(0, 12))
+        ttk.Label(row, text='Module', style='SectionTitle.TLabel').pack(side='left', padx=(0, 16))
         self.combo = ttk.Combobox(row, textvariable=self.selected, state='readonly', width=32)
         self.combo.pack(side='left', fill='x', expand=True)
         self.combo.bind('<<ComboboxSelected>>', lambda _: self.on_select())
-        self.button(row, 'New Module', lambda: self.edit_module(False)).pack(side='left', padx=8)
-        self.button(row, 'Settings', lambda: self.edit_module(True)).pack(side='left')
-        self.button(row, 'Drive Setup', self.drive_setup).pack(side='left', padx=(8, 0))
+        self.button(row, '+ New module', lambda: self.edit_module(False)).pack(side='left', padx=12)
+        self.more_btn = tk.Menubutton(row, text='More  ...', font=('Avenir Next', 12), bg='#ffffff', fg='#46615c',
+                                      relief='flat', padx=14, pady=10, cursor='hand2')
+        self.more_btn.pack(side='right')
+        menu = tk.Menu(self.more_btn, tearoff=False)
+        for title, command in [('Module settings', lambda: self.edit_module(True)), ('Google Drive connection', self.drive_setup),
+                               ('Import options', self.toggle_options), ('Update history', self.history),
+                               ('Retired NotebookLM sources', self.retired_sources), ('Open all source packs', lambda: self.open_folder('Packs'))]:
+            menu.add_command(label=title, command=command)
+        self.more_btn.configure(menu=menu)
         self.info = ttk.Label(self.frame, text='', style='Body.TLabel', wraplength=900)
-        self.info.pack(anchor='w', pady=(8, 12))
-        imports = ttk.Frame(self.frame, style='Card.TFrame')
-        imports.pack(fill='x')
-        self.button(imports, 'Choose ZIPs', self.choose_zips).pack(side='left')
-        self.button(imports, 'Choose Folder', self.choose_folder).pack(side='left', padx=8)
-        self.full_check = ttk.Checkbutton(imports, text='Full module snapshot (review missing files)', variable=self.full)
-        self.full_check.pack(side='left', padx=8)
+        self.info.pack(anchor='w', pady=(8, 18))
+        self.steps = ttk.Label(self.frame, text='01  IMPORT     /     02  REVIEW     /     03  UPDATE', style='SectionTitle.TLabel')
+        self.steps.pack(anchor='w', pady=(0, 18))
+        self.options = ttk.Frame(self.frame, style='Card.TFrame')
+        self.full_check = ttk.Checkbutton(self.options, text='This is a complete module export: review files missing from it', variable=self.full)
+        self.full_check.pack(anchor='w', pady=(0, 12))
         self.full.trace_add('write', lambda *_: self.invalidate())
-        ttk.Label(self.frame, textvariable=self.selection_text, style='Body.TLabel').pack(anchor='w', pady=(6, 10))
-        actions = ttk.Frame(self.frame, style='Card.TFrame')
-        actions.pack(fill='x')
-        self.button(actions, '1. Preview Changes', self.preview, True).pack(side='left')
-        self.button(actions, 'Review Selected', self.resolve_selected).pack(side='left', padx=8)
-        self.button(actions, '2. Prepare Packs', self.prepare).pack(side='left')
-        self.button(actions, '3. Apply Update', self.apply, True).pack(side='left', padx=8)
-        self.button(actions, 'Sync / Retry Drive', self.sync).pack(side='left')
-        self.cancel_btn = ttk.Button(actions, text='Cancel', command=self.cancel.set, state='disabled')
-        self.cancel_btn.pack(side='left', padx=8)
-        ttk.Label(self.frame, textvariable=self.summary, style='SectionTitle.TLabel', wraplength=900).pack(anchor='w', pady=(12, 8))
-        table = ttk.Frame(self.frame, style='Card.TFrame')
+        self.imports = ttk.Frame(self.frame, style='Card.TFrame')
+        self.imports.pack(fill='x', pady=(0, 16))
+        self.button(self.imports, 'Choose ZIP files', self.choose_zips).pack(side='left')
+        self.button(self.imports, 'Choose a folder', self.choose_folder).pack(side='left', padx=10)
+        ttk.Label(self.imports, textvariable=self.selection_text, style='Body.TLabel').pack(side='left', padx=12)
+        self.content = ttk.Frame(self.frame, style='Card.TFrame')
+        self.content.pack(fill='both', expand=True)
+        self.empty = tk.Frame(self.content, bg='#f3f7f5', padx=42, pady=35)
+        self.empty_title = tk.Label(self.empty, text='', font=('Avenir Next', 24, 'bold'), bg='#f3f7f5', fg='#193f37', anchor='w')
+        self.empty_title.pack(anchor='w', pady=(0, 12))
+        self.empty_detail = tk.Label(self.empty, text='', font=('Avenir Next', 13), bg='#f3f7f5', fg='#526b63',
+                                     justify='left', wraplength=660)
+        self.empty_detail.pack(anchor='w')
+        self.table_panel = ttk.Frame(self.content, style='Card.TFrame')
+        review_row = ttk.Frame(self.table_panel, style='Card.TFrame')
+        review_row.pack(fill='x', pady=(0, 10))
+        ttk.Label(review_row, textvariable=self.summary, style='SectionTitle.TLabel', wraplength=650).pack(side='left')
+        self.review_btn = self.button(review_row, 'Review selected files', self.resolve_selected)
+        self.review_btn.pack(side='right')
+        table = ttk.Frame(self.table_panel, style='Card.TFrame')
         table.pack(fill='both', expand=True)
         self.tree = ttk.Treeview(table, columns=('status', 'path', 'pack'), show='headings', height=10)
-        for key, title, width in [('status', 'Change', 120), ('path', 'Original course file', 430), ('pack', 'Pack category / decision', 260)]:
+        for key, title, width in [('status', 'Status', 120), ('path', 'Course file', 430), ('pack', 'Source group', 260)]:
             self.tree.heading(key, text=title)
             self.tree.column(key, width=width, minwidth=80)
         self.tree.pack(side='left', fill='both', expand=True)
@@ -83,14 +102,81 @@ class ModulePanel:
         scroll.pack(side='right', fill='y')
         self.tree.configure(yscrollcommand=scroll.set)
         self.tree.bind('<Double-1>', lambda _: self.resolve_selected())
-        footer = ttk.Frame(self.frame, style='Card.TFrame')
-        footer.pack(fill='x', pady=(12, 8))
-        for title, action in [('Open Current Files', lambda: self.open_folder('Current Files')),
-                              ('Open Latest Update', lambda: self.open_folder('Latest Update')),
-                              ('Open Packs', lambda: self.open_folder('Packs')),
-                              ('Open Notebook', self.open_notebook), ('History', self.history), ('Retired Sources', self.retired_sources)]:
-            self.button(footer, title, action).pack(side='left', padx=(0, 8))
-        ttk.Label(self.frame, textvariable=self.status, style='Body.TLabel', wraplength=920).pack(anchor='w')
+        self.bottom = ttk.Frame(self.frame, style='Card.TFrame')
+        self.bottom.pack(side='bottom', fill='x', before=self.content, pady=(20, 12))
+        self.primary_btn = self.button(self.bottom, 'Create your first module', self.next_step, True)
+        self.primary_btn.pack(side='right')
+        self.cancel_btn = self.button(self.bottom, 'Cancel', self.cancel.set)
+        self.cancel_btn.configure(state='disabled')
+        self.secondary_btn = self.button(self.bottom, 'Open course files', lambda: self.open_folder('Current Files'))
+        self.notebook_btn = self.button(self.bottom, 'Open NotebookLM', self.open_notebook)
+        ttk.Label(self.frame, textvariable=self.status, style='Body.TLabel', wraplength=920).pack(side='bottom', anchor='w', before=self.bottom)
+        self.render()
+
+    def toggle_options(self):
+        if self.busy:
+            return
+        if self.options.winfo_manager():
+            self.options.pack_forget()
+        else:
+            self.options.pack(fill='x', before=self.imports)
+
+    def next_step(self):
+        if not self.modules:
+            self.edit_module(False)
+        elif self.prepared:
+            self.apply()
+        elif self.review:
+            self.prepare()
+        elif self.phase == 'complete':
+            if self.module()['mode'] == 'drive':
+                self.sync()
+            else:
+                self.open_folder('Latest Update')
+        else:
+            self.preview()
+
+    def render(self):
+        if not hasattr(self, 'primary_btn'):
+            return
+        self.empty.pack_forget()
+        self.table_panel.pack_forget()
+        self.cancel_btn.pack_forget()
+        self.secondary_btn.pack_forget()
+        self.notebook_btn.pack_forget()
+        if self.modules:
+            self.imports.pack(fill='x', before=self.content, pady=(0, 16))
+        else:
+            self.imports.pack_forget()
+            self.options.pack_forget()
+        if self.review:
+            self.table_panel.pack(fill='both', expand=True)
+            action = 'Update module' if self.prepared else 'Continue'
+            self.steps.configure(text='01  IMPORT     /     02  REVIEW     /     03  UPDATE' if not self.prepared else 'Ready to update  |  Your previous files stay recoverable')
+        else:
+            self.empty.pack(fill='both', expand=True)
+            if not self.modules:
+                title, detail, action = ('Your courses, kept up to date.',
+                    'Start by saving a module name. Then bring in your NOW exports whenever new teaching material is published.\n\nWe will show you what changed before updating anything.', 'Create your first module')
+            elif self.phase == 'complete':
+                title, detail = ('Your local files are up to date.', 'Your previous versions are safe in update history.\n\nNext, sync your linked sources or open the files that need uploading.')
+                action = 'Sync to NotebookLM' if self.module()['mode'] == 'drive' else 'Open latest update'
+            elif self.inputs:
+                title, detail, action = ('Ready to check for changes.', 'We will compare this export with your saved module.\nUnchanged files stay untouched, and missing earlier weeks are kept.', 'Check for changes')
+            else:
+                title, detail, action = ('Bring in your latest course export.', 'Choose a ZIP file or a folder of ZIPs from NOW.\nWe will find new and revised material for this module.', 'Check for changes')
+            self.empty_title.configure(text=title)
+            self.empty_detail.configure(text=detail)
+            self.steps.configure(text='01  IMPORT     /     02  REVIEW     /     03  UPDATE')
+        self.primary_btn.configure(text=action, state='disabled' if self.busy or (self.modules and not self.inputs and self.phase != 'complete') else 'normal')
+        self.more_btn.configure(state='disabled' if self.busy else 'normal')
+        if self.busy and self.cancellable:
+            self.cancel_btn.pack(side='left')
+            self.cancel_btn.configure(state='normal')
+        if self.modules and self.store.snapshot(self.module()['id']).get('revision'):
+            self.secondary_btn.pack(side='left')
+            if self.module()['notebook']:
+                self.notebook_btn.pack(side='left', padx=10)
 
     def module(self):
         index = self.combo.current()
@@ -105,14 +191,16 @@ class ModulePanel:
             index = next((i for i, m in enumerate(self.modules) if m['id'] == select_id), 0)
             self.combo.current(index)
             self.on_select()
+        else:
+            self.render()
 
     def on_select(self):
         self.invalidate()
         if self.modules:
             module = self.module()
             snapshot = self.store.snapshot(module['id'])
-            self.info.configure(text=f'{module["mode"].title()} mode  |  {len(snapshot["packs"])} managed packs  |  '
-                                    f'{module["reserved"]} reserved sources  |  limit {module["limit"]} (estimated)\n{module["root"]}')
+            mode = 'Google Drive linked' if module['mode'] == 'drive' else 'Local files'
+            self.info.configure(text=f'{mode}  /  {len(snapshot["packs"])} source packs  /  {module["reserved"]} slots reserved for other sources')
             if snapshot.get('revision'):
                 try:
                     self.store.publish_links(module['id'])
@@ -120,11 +208,13 @@ class ModulePanel:
                     self.status.set('Folder links need repair. Check module destination permissions.')
 
     def invalidate(self):
+        self.phase = 'import'
         self.review = self.prepared = None
         self.decisions = {}
         if hasattr(self, 'tree'):
             self.tree.delete(*self.tree.get_children())
         self.summary.set('Preview changes before applying an update.')
+        self.render()
 
     def edit_module(self, editing):
         if self.busy:
@@ -192,6 +282,7 @@ class ModulePanel:
                 button.configure(state='disabled')
         self.combo.configure(state='disabled')
         self.full_check.configure(state='disabled')
+        self.render()
         def worker():
             try:
                 result = operation()
@@ -230,6 +321,7 @@ class ModulePanel:
                         callback(result)
                     except (ValueError, tk.TclError):
                         self.status.set('Operation finished; reopen the relevant dialog to inspect its result.')
+                self.render()
         except queue.Empty:
             pass
         self.root.after(120, self.poll)
@@ -258,6 +350,7 @@ class ModulePanel:
             self.tree.insert('', 'end', iid=str(index), values=(change['status'], change['path'], group))
         self.summary.set('  |  '.join(f'{count} {status}' for status, count in result['counts'].items()))
         self.status.set('Double-click an item to resolve conflicts, confirm reference packs or approve removals. Then prepare packs.')
+        self.render()
 
     def resolve_selected(self):
         if self.busy or not self.review:
@@ -304,6 +397,7 @@ class ModulePanel:
             self.decisions[change['key']] = decision
             self.tree.set(index, 'pack', 'Remove approved' if decision.get('remove') else decision.get('group', 'Keep existing'))
         self.prepared = None
+        self.render()
 
     def prepare(self):
         if not self.review:
@@ -315,6 +409,7 @@ class ModulePanel:
             self.prepared = result
             self.summary.set(f'{len(result["changed"])} packs changed | {len(result["retired"])} retired | estimated sources {result["estimated_sources"]}/{self.module()["limit"]}')
             self.status.set('Packs prepared, not yet applied. Review warnings before Apply Update.')
+            self.render()
             if result['warnings']:
                 self.show_details('Review Pack Warnings', '\n\n'.join(result['warnings']))
         self.work('Preparing stable source packs...', lambda: engine.prepare(self.store, token, decisions, self.log), completed)
@@ -329,8 +424,10 @@ class ModulePanel:
             return
         def completed(snapshot):
             self.review = self.prepared = None
+            self.phase = 'complete'
             self.status.set('Local update complete. Open Latest Update for local uploads, or use Sync / Retry Drive.')
-            self.info.configure(text=f'{len(snapshot["packs"])} packs | estimated sources {snapshot["estimated_sources"]}/{self.module()["limit"]}\n{self.module()["root"]}')
+            self.info.configure(text=f'{len(snapshot["packs"])} source packs  /  Estimated notebook sources: {snapshot["estimated_sources"]} of {self.module()["limit"]}')
+            self.render()
         self.work('Applying local update...', lambda: engine.apply(self.store, result['token'], self.log), completed)
 
     def show_details(self, title, content):

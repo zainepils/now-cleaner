@@ -82,6 +82,13 @@ class CleanerApp:
 
         self.style.configure('TCheckbutton', background='#ffffff', foreground='#334b5f', font=('Avenir Next', 10))
         self.style.configure('TEntry', fieldbackground='#f9fbfd')
+        self.style.configure('TCombobox', padding=8, font=('Avenir Next', 12), fieldbackground='#f3f7f5')
+        self.style.configure('TNotebook', background='#eef3f8', borderwidth=0)
+        self.style.configure('TNotebook.Tab', font=('Avenir Next', 12), padding=(18, 10), background='#e4ece9')
+        self.style.map('TNotebook.Tab', background=[('selected', '#ffffff')], foreground=[('selected', '#193f37')])
+        self.style.configure('Treeview', font=('Avenir Next', 11), rowheight=34, background='#ffffff', fieldbackground='#ffffff', borderwidth=0)
+        self.style.configure('Treeview.Heading', font=('Avenir Next', 11, 'bold'), padding=10, background='#edf3f2', relief='flat')
+        self.style.configure('Body.TLabel', font=('Avenir Next', 11), foreground='#526b63')
 
     def _build_ui(self) -> None:
         root_wrap = ttk.Frame(self.root, style='Root.TFrame', padding=16)
@@ -92,7 +99,7 @@ class CleanerApp:
         ttk.Label(header, text='NOW Cleaner', style='Title.TLabel').pack(anchor='w')
         ttk.Label(
             header,
-            text='Keep your course exports organised, review changes and maintain stable NotebookLM source packs.',
+            text='Your course materials, organised and up to date.',
             style='Subtitle.TLabel',
         ).pack(anchor='w', pady=(2, 0))
 
@@ -100,8 +107,8 @@ class CleanerApp:
         tabs.pack(fill='both', expand=True, pady=(12, 0))
         modules_tab = ttk.Frame(tabs, style='Card.TFrame')
         legacy_tab = ttk.Frame(tabs, style='Root.TFrame')
-        tabs.add(modules_tab, text='Modules & Updates')
-        tabs.add(legacy_tab, text='One-off Cleaner')
+        tabs.add(modules_tab, text='My modules')
+        tabs.add(legacy_tab, text='Quick clean')
         from now_cleaner.module_ui import ModulePanel
         self.module_panel = ModulePanel(modules_tab, self.root)
         self.module_panel.legacy_busy = lambda: self.running

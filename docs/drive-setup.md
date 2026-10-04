@@ -8,7 +8,7 @@ Drive syncing is optional. Local modules work without a Google account.
 2. Enable **Google Drive API** and **Google Docs API** in that project.
 3. Configure Google Auth Platform branding/audience for personal testing. Add your personal Google account as a test user if the app is in Testing status.
 4. Create an OAuth client of type **Desktop app**, then download its JSON. Keep it outside this repository.
-5. In NOW Cleaner, open **Drive Setup**, click **Connect Google Drive**, and select that JSON. Complete consent in your browser.
+5. In NOW Cleaner, open **More > Google Drive connection**, click **Connect Google Drive**, and select that JSON. Complete consent in your browser.
 
 The app requests only `drive.file`, allowing access to files it creates or which are explicitly made available to it. Sign-in uses PKCE and a temporary localhost callback that closes after consent. Access and refresh tokens are stored only in macOS Keychain. No password is requested by NOW Cleaner. There is no hosted app UI.
 
