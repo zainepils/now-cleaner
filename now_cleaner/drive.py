@@ -191,7 +191,10 @@ class DriveClient:
                     self.store.set_remote(module_id, pack['id'], previous)
                     body['id'] = ids[0]
                     media = MediaFileUpload(str(source), resumable=True)
-                    meta = self.drive.files().create(body=body, media_body=media, fields=FIELDS).execute()
+                    try:
+                        meta = self.drive.files().create(body=body, media_body=media, fields=FIELDS).execute()
+                    finally:
+                        media.stream().close()
                     previous['uploaded_hash'] = pack['hash']
                 previous.update(id=meta['id'], version=str(meta['version']), account=self.account, create_pending=False)
                 self.store.set_remote(module_id, pack['id'], previous)
@@ -219,9 +222,13 @@ class DriveClient:
                 if not etag:
                     raise DriveConflict('Drive did not supply a conditional-write token; refusing an unsafe update')
                 properties['nowHash'] = pack['hash']
-                request = self.drive.files().update(fileId=meta['id'], body={'appProperties': properties}, media_body=MediaFileUpload(str(source), resumable=True), fields=FIELDS)
-                request.headers['If-Match'] = etag
-                meta = request.execute()
+                media = MediaFileUpload(str(source), resumable=True)
+                try:
+                    request = self.drive.files().update(fileId=meta['id'], body={'appProperties': properties}, media_body=media, fields=FIELDS)
+                    request.headers['If-Match'] = etag
+                    meta = request.execute()
+                finally:
+                    media.stream().close()
         if pack['kind'] == 'doc':
             if not self._matches(meta, pack, source):
                 raise DriveConflict('Google Doc content changed during upload; receipt not advanced')

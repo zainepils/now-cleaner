@@ -129,6 +129,19 @@ class DriveTests(unittest.TestCase):
     def pack(self, kind='doc'):
         return dict(id='Lectures|' + kind + '|1', label='Lectures', kind=kind, hash=digest(self.source))
 
+    def test_failed_binary_upload_closes_its_file(self):
+        original = drive.MediaFileUpload
+        opened = []
+        def media(*args, **kwargs):
+            value = original(*args, **kwargs)
+            opened.append(value)
+            return value
+        folder = self.client.folder('module', 'Marketing')
+        self.google.fail_next = True
+        with mock.patch.object(drive, 'MediaFileUpload', side_effect=media), self.assertRaises(ConnectionError):
+            self.client.upload('module', self.pack('pdf'), self.source, folder)
+        self.assertTrue(opened[0].stream().closed)
+
     def upload(self, kind='doc'):
         folder = self.client.folder('module', 'Marketing')
         return self.client.upload('module', self.pack(kind), self.source, folder)

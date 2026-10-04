@@ -19,10 +19,15 @@ class GuidedUITests(unittest.TestCase):
         patch.start()
         self.addCleanup(patch.stop)
         self.root = tk.Tk()
-        self.addCleanup(self.root.destroy)
+        self.addCleanup(self.close_root)
         self.app = CleanerApp(self.root)
         self.panel = self.app.module_panel
         self.root.update()
+
+    def close_root(self):
+        for timer in self.root.tk.call('after', 'info'):
+            self.root.tk.call('after', 'cancel', timer)
+        self.root.destroy()
 
     def add_module(self):
         module = self.store.save_module('Marketing Principles', Path(self.temp.name) / 'modules')
