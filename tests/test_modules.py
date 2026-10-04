@@ -255,6 +255,12 @@ class ModuleTests(unittest.TestCase):
         other = self.store.save_module('Marketing', root.parent)
         self.assertNotEqual(other['root'], self.module['root'])
 
+    def test_rename_does_not_rewrite_hidden_ownership_file(self):
+        self.import_files({'Lecture/a.txt': 'a'})
+        with mock.patch.object(Path, 'write_text', side_effect=PermissionError('hidden Windows file')):
+            renamed = self.store.rename_module(self.module['id'], 'Updated name')
+        self.assertEqual(renamed['name'], 'Updated name')
+
     def test_old_module_layout_remains_compatible(self):
         config = dict(self.module)
         config.pop('layout')

@@ -112,7 +112,8 @@ class Store:
         if root.exists() and (not marker.is_file() or json.loads(marker.read_text()).get('id') != module_id):
             raise ValueError('Destination is not an owned module folder')
         root.mkdir(exist_ok=True)
-        marker.write_text(json.dumps({'id': module_id}), encoding='utf-8')
+        if not marker.exists():
+            marker.write_text(json.dumps({'id': module_id}), encoding='utf-8')
         config = dict(id=module_id, name=name, root=str(root), notebook=notebook.strip(), mode=mode, limit=limit, reserved=reserved)
         config['layout'] = previous.get('layout', 1) if previous else 2
         with self.connect() as conn:
