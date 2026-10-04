@@ -2,6 +2,18 @@
 
 A local macOS desktop app for organising NTU NOW course ZIP exports and preparing NotebookLM sources. Save a module, review changes between exports, and maintain stable source packs instead of repeatedly rebuilding everything. Optional Google Drive integration updates linked packs in place; **live NotebookLM syncing must be manually verified for your account before real course uploads are enabled**.
 
+## Download for Mac
+
+**[Download NOW Cleaner for Apple silicon](https://github.com/zainepils/now-cleaner/releases/download/v0.1.0/NOW-Cleaner-Apple-Silicon.dmg)**
+
+Open the installer, drag NOW Cleaner into Applications, then open it from there.
+Python is included; no coding setup is needed. This build is for M-series Macs, not Intel
+or Windows. **Personal-use preview: not Apple-notarized**, so macOS may require a
+first-launch approval. Read the [short installation guide](docs/install.md).
+
+Local files work without Google setup. Office visual packs need LibreOffice installed
+separately; optional Drive connection still needs personal OAuth setup.
+
 The repository's code and documentation are available under the [PolyForm Noncommercial License 1.0.0](LICENSE). You may use, modify, and share them for permitted noncommercial purposes, provided you pass on the license terms and [required notice](NOTICE). Commercial use requires separate permission from the owner. This is source-available software, not an open-source license. The license does not grant rights to any course content or other files a user processes with the tool.
 
 ## Privacy at a glance
@@ -118,6 +130,9 @@ To prepare (not publish) a traceable archive from a clean committed checkout, ru
 `sh scripts/package_release.sh`. It rebuilds the app and includes its source commit,
 build environment and dependency list, plus a separate SHA-256 checksum. Review public
 distribution/signing before uploading a release.
+
+`sh scripts/make_dmg.sh` creates the drag-to-Applications installer, verifies the disk
+image, and writes its checksum and build details. It does not upload anything.
 
 ## Tests and data safety
 

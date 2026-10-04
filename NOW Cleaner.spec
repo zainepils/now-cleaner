@@ -1,8 +1,28 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_data_files
+from importlib.metadata import distributions
+from pathlib import Path
+import sys
 
-datas = [('docs/drive-setup.md', 'docs'), ('docs/privacy.md', 'docs')]
+datas = [('docs/drive-setup.md', 'docs'), ('docs/privacy.md', 'docs'),
+         ('docs/install.md', 'docs'), ('LICENSE', '.'), ('NOTICE', '.')]
 datas += collect_data_files('googleapiclient')
+# Include dependency notices in the app, so they survive dragging it out of the DMG.
+for dist in distributions():
+    for entry in dist.files or []:
+        parts = entry.parts
+        if any(part.endswith('.dist-info') for part in parts) and (
+            'licenses' in parts or entry.name.lower().startswith(('license', 'copying', 'notice'))
+        ):
+            source = Path(dist.locate_file(entry))
+            if source.is_file():
+                datas.append((str(source), 'third-party/' + str(entry.parent)))
+python_notice = Path(sys.base_prefix) / 'Resources/English.lproj/Documentation/_sources/license.rst.txt'
+if python_notice.is_file():
+    datas.append((str(python_notice), 'third-party/python'))
+tk_notice = Path(sys.base_prefix) / 'lib/tk8.6/demos/license.terms'
+if tk_notice.is_file():
+    datas.append((str(tk_notice), 'third-party/tk'))
 
 
 a = Analysis(
@@ -51,4 +71,9 @@ app = BUNDLE(
     name='NOW Cleaner.app',
     icon='assets/now-cleaner.icns',
     bundle_identifier='com.zainepils.now-cleaner',
+    info_plist={
+        'CFBundleShortVersionString': '0.1.0',
+        'CFBundleVersion': '1',
+        'LSMinimumSystemVersion': '11.0',
+    },
 )
