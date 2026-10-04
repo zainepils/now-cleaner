@@ -4,6 +4,7 @@ __pycache__/
 build/
 dist/
 *.spec
+!NOW Cleaner.spec
 .DS_Store
 .local-backups/
 .now-cleaner-*/

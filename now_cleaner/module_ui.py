@@ -67,7 +67,7 @@ class ModulePanel:
                                ('Import a folder of ZIP files', self.choose_folder),
                                ('Import options', self.toggle_options), ('Update history', self.history),
                                ('Retired NotebookLM sources', self.retired_sources), ('Open all source packs', lambda: self.open_folder('Packs')),
-                               ('How to use NOW Cleaner', self.help)]:
+                               ('How to use NOW Cleaner', self.help), ('Privacy and your data', self.privacy)]:
             menu.add_command(label=title, command=command)
         self.more_btn.configure(menu=menu)
         self.info = ttk.Label(self.frame, text='', style='Body.TLabel', wraplength=900)
@@ -142,6 +142,12 @@ class ModulePanel:
             '5. Update NotebookLM\nOpen files to upload and follow the included checklist. Google Drive is optional and requires setup. '
             'Saving locally or sending files to Drive is not confirmation that NotebookLM has updated.\n\n'
             'Next time\nChoose the same module and add the new NOW download. Previous saved versions remain in More > Update history.')
+
+    def privacy(self):
+        location = Path(__file__).resolve().parents[1] / 'docs' / 'privacy.md'
+        self.show_details('Privacy and your data', location.read_text(encoding='utf-8') if location.is_file() else
+                          'Course files are processed locally, not sent to the maintainer. Optional Google Drive uploads send your packs to Google. '
+                          'The one-off cleaner can send ZIP names to OpenAI if an API key is configured. See the repository privacy guide for full details.')
 
     def next_step(self):
         if not self.modules:

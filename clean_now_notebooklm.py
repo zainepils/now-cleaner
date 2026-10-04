@@ -1376,9 +1376,6 @@ def write_summary_html(
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>NOW Cleanup Summary</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {{
       --bg: #f2f6f2;
@@ -1395,7 +1392,7 @@ def write_summary_html(
     * {{ box-sizing: border-box; }}
     body {{
       margin: 0;
-      font-family: "Manrope", "Avenir Next", "Segoe UI", sans-serif;
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
       color: var(--ink);
       background:
         radial-gradient(circle at 10% 0%, #d9f0ea, transparent 42%),
@@ -1427,7 +1424,7 @@ def write_summary_html(
     }}
     h1 {{
       margin: 0;
-      font-family: "Fraunces", Georgia, serif;
+      font-family: "Baskerville", Georgia, serif;
       font-size: clamp(28px, 4vw, 42px);
       letter-spacing: 0.01em;
       line-height: 1.08;
@@ -1463,13 +1460,13 @@ def write_summary_html(
     }}
     h2 {{
       margin: 0 0 12px;
-      font-family: "Fraunces", Georgia, serif;
+      font-family: "Baskerville", Georgia, serif;
       font-size: clamp(20px, 2.6vw, 28px);
       letter-spacing: 0.01em;
     }}
     h3 {{
       margin: 0 0 8px;
-      font-family: "Fraunces", Georgia, serif;
+      font-family: "Baskerville", Georgia, serif;
       font-size: 20px;
       line-height: 1.2;
     }}

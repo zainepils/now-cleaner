@@ -4,6 +4,19 @@ A local macOS desktop app for organising NTU NOW course ZIP exports and preparin
 
 The repository's code and documentation are available under the [PolyForm Noncommercial License 1.0.0](LICENSE). You may use, modify, and share them for permitted noncommercial purposes, provided you pass on the license terms and [required notice](NOTICE). Commercial use requires separate permission from the owner. This is source-available software, not an open-source license. The license does not grant rights to any course content or other files a user processes with the tool.
 
+## Privacy at a glance
+
+- **Your course files are not sent to the maintainer.** There is no developer-operated backend, analytics, telemetry or automatic crash-report upload in the application code.
+- **Local processing works without an internet connection.** Optional Drive sync sends generated course packs to your Google account. It does not verify NotebookLM has updated.
+- **Optional one-off AI naming contacts OpenAI** if an API key is already configured. It sends ZIP filename stems, not document contents. Module naming never uses AI.
+- **History stays on your computer.** Reports and inventory can contain paths, filenames and account metadata. Google tokens use macOS Keychain; local course/history files are not app-encrypted.
+- **New HTML reports have no remote assets.** Fonts and styling are local. External links only open their sites when followed. Older reports must be regenerated to remove previous remote fonts.
+
+See [Privacy and Data Flow](docs/privacy.md) for destinations, retention, deletion and verification steps, and [Security Policy](SECURITY.md) for reporting concerns. These are implementation-backed statements, not security certification.
+
+Public [synthetic test runs](https://github.com/zainepils/now-cleaner/actions/workflows/tests.yml)
+provide evidence you can inspect; they do not prove the app is free of vulnerabilities.
+
 ## Modules & updates
 
 1. Create a module by giving it a name. Folder, NotebookLM link and source-limit settings are optional. Defaults: local files, one NotebookLM notebook per module, 50 source slots, 15 reserved for independently added sources.
@@ -90,12 +103,21 @@ Use `--help` for connect, probe, confirm-probe, history and disconnect commands.
 
 ```sh
 .venv/bin/python -m pip install pyinstaller
-.venv/bin/pyinstaller --noconfirm --clean --windowed --name 'NOW Cleaner' \
-  --hidden-import keyring.backends.macOS --collect-data googleapiclient \
-  --add-data 'docs/drive-setup.md:docs' now_cleaner_desktop.py
+.venv/bin/pyinstaller --noconfirm 'NOW Cleaner.spec'
 ```
 
 The result is `dist/NOW Cleaner.app`. Python and libraries are bundled; LibreOffice is an external dependency for visual Office packs. Local builds are ad-hoc signed, not notarized for public distribution. Public downloadable releases need a separate signing/distribution pass.
+
+The checked-in spec includes the original code-drawn app icon in `assets/`. To regenerate
+it on macOS, run `sh scripts/make_icon.sh` (requires Apple's Swift command-line tools).
+Builds are not currently byte-for-byte reproducible; dependency versions are bounded,
+not fully locked. Match any published binary to its stated source commit and checksum,
+or build locally. A checksum does not prove safety.
+
+To prepare (not publish) a traceable archive from a clean committed checkout, run
+`sh scripts/package_release.sh`. It rebuilds the app and includes its source commit,
+build environment and dependency list, plus a separate SHA-256 checksum. Review public
+distribution/signing before uploading a release.
 
 ## Tests and data safety
 
