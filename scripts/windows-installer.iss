@@ -1,7 +1,7 @@
 [Setup]
 AppId={{8F963261-081C-4B05-A16A-24C869F813D0}
 AppName=NOW Cleaner
-AppVersion=0.3.0
+AppVersion=0.3.1
 AppPublisher=Zaine Pilsworth
 AppPublisherURL=https://github.com/zainepils/now-cleaner
 DefaultDirName={localappdata}\Programs\NOW Cleaner

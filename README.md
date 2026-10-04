@@ -1,22 +1,28 @@
 # NOW Cleaner
 
-A local macOS desktop app for organising NTU NOW course ZIP exports and preparing NotebookLM sources. Save a module, review changes between exports, and maintain stable source packs instead of repeatedly rebuilding everything. Optional Google Drive integration updates linked packs in place; **live NotebookLM syncing must be manually verified for your account before real course uploads are enabled**.
+A local Mac and Windows desktop app for organising NTU NOW course ZIP exports and preparing NotebookLM sources. Save a module, review changes between exports, and maintain stable source packs instead of repeatedly rebuilding everything. Optional Google Drive integration on Mac updates linked packs in place; **live NotebookLM syncing must be manually verified for your account before real course uploads are enabled**.
 
-## Download for Mac
+## Download
 
-**[Download NOW Cleaner for Apple silicon](https://github.com/zainepils/now-cleaner/releases/download/v0.3.0/NOW-Cleaner-Apple-Silicon.dmg)**
+Choose the download for your computer. Python is included; no coding setup is needed.
 
-Open the installer, drag NOW Cleaner into Applications, then open it from there.
-Python is included; no coding setup is needed. This build is for M-series Macs, not Intel
-or Windows. **Personal-use preview: not Apple-notarized**, so macOS may require a
-first-launch approval. Read the [short installation guide](docs/install.md).
+| Your computer | Download | Installation |
+| --- | --- | --- |
+| Mac with an Apple M-series chip | [Apple-silicon Mac installer](https://github.com/zainepils/now-cleaner/releases/download/v0.3.1/NOW-Cleaner-Apple-Silicon.dmg) | Open the DMG and drag the app into Applications. |
+| Mac with an Intel processor | [Intel Mac installer](https://github.com/zainepils/now-cleaner/releases/download/v0.3.1/NOW-Cleaner-Intel-Mac.dmg) | Open the DMG and drag the app into Applications. |
+| Windows 10/11, Intel/AMD x64 | [Windows installer](https://github.com/zainepils/now-cleaner/releases/download/v0.3.1/NOW-Cleaner-Windows-Setup.exe) | Run the EXE, then open NOW Cleaner from Start. |
+
+On a Mac, **Apple menu > About This Mac** shows either an Apple chip or an Intel processor.
+Windows ARM devices are not supported by this installer.
+
+**Personal-use previews:** Mac installers are ad-hoc signed, not Apple-notarized;
+the Windows installer is unsigned. First-launch security approval may be required.
+Read the [Mac installation guide](docs/install.md) or [Windows guide](docs/windows.md).
 
 Local files work without Google setup. Office visual packs need LibreOffice installed
 separately; optional Drive connection still needs personal OAuth setup.
 
-**[Download the Windows preview](https://github.com/zainepils/now-cleaner/releases/download/v0.3.0/NOW-Cleaner-Windows-Setup.exe)**
-for Windows 10/11 x64 PCs. This unsigned, local-only preview includes Python and a normal
-installer. Google Drive is unavailable on Windows for now. Please complete the
+Windows is a local-only preview. Google Drive is unavailable on Windows for now. Please complete the
 [short PC check](docs/windows.md) before sharing it with peers.
 
 The repository's code and documentation are available under the [PolyForm Noncommercial License 1.0.0](LICENSE). You may use, modify, and share them for permitted noncommercial purposes, provided you pass on the license terms and [required notice](NOTICE). Commercial use requires separate permission from the owner. This is source-available software, not an open-source license. The license does not grant rights to any course content or other files a user processes with the tool.

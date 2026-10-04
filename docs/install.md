@@ -2,15 +2,18 @@
 
 ## Download for Mac
 
-[Download NOW Cleaner for Apple silicon](https://github.com/zainepils/now-cleaner/releases/download/v0.3.0/NOW-Cleaner-Apple-Silicon.dmg)
+[Download for Apple-silicon Macs](https://github.com/zainepils/now-cleaner/releases/download/v0.3.1/NOW-Cleaner-Apple-Silicon.dmg)
 
-This personal-use preview is for **Apple-silicon Macs (M-series)**, not Intel Macs
-or Windows. Python is included: no coding or terminal setup is needed.
-The bundled binaries target macOS 11 or later; the release was tested on macOS 27,
-not every older macOS version.
+[Download for Intel Macs](https://github.com/zainepils/now-cleaner/releases/download/v0.3.1/NOW-Cleaner-Intel-Mac.dmg)
+
+There are separate personal-use previews for **Apple-silicon Macs (M-series)** and
+**Intel Macs (x86_64)**. Python is included: no coding or terminal setup is needed.
+The app targets macOS 11 or later. Intel builds are tested on a macOS 15 GitHub runner;
+Apple-silicon builds are checked on macOS 14 and packaged workflows tested on macOS 27.
+Not every older macOS release or physical Intel Mac has been verified.
 
 To check your Mac, choose Apple menu > About This Mac. Look for a **Chip** beginning
-with Apple M. If it shows an Intel processor, this download is not suitable.
+with Apple M for the Apple-silicon download, or **Processor: Intel** for the Intel download.
 
 ## Install
 
@@ -53,7 +56,8 @@ processing. Drive sync is optional and still needs the technical
 ## Word and PowerPoint Packs
 
 Visual packs made from Office files require [LibreOffice](https://www.libreoffice.org/download/download-libreoffice/),
-installed separately in Applications. Choose the Mac Apple-silicon download there.
+installed separately in Applications. Choose the LibreOffice download matching your
+Mac's processor: Apple silicon or Intel.
 It is not needed merely to open NOW Cleaner or to process text/PDF packs.
 The one-off cleaner can retain `.docx` and `.pptx` originals without this conversion.
 NOW Cleaner will report a missing converter; it does not install LibreOffice for you.
