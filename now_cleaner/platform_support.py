@@ -13,7 +13,8 @@ def documents_folder():
     if sys.platform == 'win32':
         import ctypes
         buffer = ctypes.create_unicode_buffer(32768)
-        if ctypes.windll.shell32.SHGetFolderPathW(None, 5, None, 0, buffer) != 0:
+        # Retrieve the configured location even before Documents has been created.
+        if ctypes.windll.shell32.SHGetFolderPathW(None, 5 | 0x4000, None, 0, buffer) != 0:
             raise OSError('Windows Documents folder is unavailable')
         return Path(buffer.value)
     return Path.home() / 'Documents'

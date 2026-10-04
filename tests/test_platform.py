@@ -11,6 +11,24 @@ from now_cleaner.store import Store, default_state, default_destination
 
 
 class PlatformTests(unittest.TestCase):
+    def test_explicit_cli_destination_never_looks_up_documents(self):
+        from now_cleaner import cli
+        with tempfile.TemporaryDirectory() as folder, mock.patch.object(cli, 'default_destination', side_effect=OSError('Documents unavailable')):
+            with mock.patch('builtins.print'):
+                self.assertEqual(cli.main(['--state-dir', str(Path(folder) / 'state'), 'create', 'Example',
+                                           '--destination', str(Path(folder) / 'output')]), 0)
+                self.assertEqual(cli.main(['--state-dir', str(Path(folder) / 'state'), 'list']), 0)
+
+    def test_windows_documents_lookup_does_not_require_existing_folder(self):
+        import ctypes
+        def lookup(hwnd, csidl, token, flags, buffer):
+            self.assertEqual(csidl, 5 | 0x4000)
+            buffer.value = '/example/not-created/Documents'
+            return 0
+        with mock.patch.object(platform.sys, 'platform', 'win32'), mock.patch.object(ctypes, 'windll', create=True) as dll:
+            dll.shell32.SHGetFolderPathW.side_effect = lookup
+            self.assertEqual(platform.documents_folder(), Path('/example/not-created/Documents'))
+
     def test_destination_uses_configured_documents(self):
         with mock.patch.object(platform, 'documents_folder', return_value=Path('/example/Documents')):
             self.assertEqual(default_destination(), Path('/example/Documents/NOW Cleaner/My Modules'))

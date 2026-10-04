@@ -15,7 +15,7 @@ def main(argv=None):
     commands.add_parser('list')
     create = commands.add_parser('create')
     create.add_argument('name')
-    create.add_argument('--destination', type=Path, default=default_destination())
+    create.add_argument('--destination', type=Path)
     create.add_argument('--mode', choices=['local', 'drive'], default='local')
     create.add_argument('--notebook', default='')
     create.add_argument('--limit', type=int, default=50)
@@ -48,7 +48,7 @@ def main(argv=None):
         if args.command == 'list':
             result = store.modules()
         elif args.command == 'create':
-            result = store.save_module(args.name, args.destination, args.notebook, args.mode, args.limit, args.reserved)
+            result = store.save_module(args.name, args.destination or default_destination(), args.notebook, args.mode, args.limit, args.reserved)
         elif args.command == 'preview':
             result = engine.preview(store, args.module, args.inputs, args.full)
         elif args.command == 'prepare':
