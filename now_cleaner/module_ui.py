@@ -39,11 +39,12 @@ class ModulePanel:
         self.root.after(120, self.poll)
 
     def button(self, parent, text, command, primary=False):
-        btn = tk.Button(parent, text=text, command=command, font=('Avenir Next', 12, 'bold' if primary else 'normal'),
-                        bg='#176b62' if primary else '#edf3f2', fg='#ffffff' if primary else '#23443f',
-                        activebackground='#12584f' if primary else '#dce9e6', activeforeground='#ffffff' if primary else '#183b35',
-                        disabledforeground='#819490', relief='flat', borderwidth=0, highlightthickness=0,
-                        padx=18, pady=10, cursor='hand2')
+        style = 'GuidedPrimary.TButton' if primary else 'GuidedSecondary.TButton'
+        theme = ttk.Style()
+        theme.configure(style, font=('Avenir Next', 12, 'bold' if primary else 'normal'), padding=(18, 10), borderwidth=0, relief='flat')
+        theme.map(style, background=[('disabled', '#e5ece9'), ('active', '#12584f' if primary else '#dce9e6'), ('!disabled', '#176b62' if primary else '#edf3f2')],
+                  foreground=[('disabled', '#819490'), ('!disabled', '#ffffff' if primary else '#23443f')])
+        btn = ttk.Button(parent, text=text, command=command, style=style, cursor='hand2')
         self.buttons.append(btn)
         return btn
 

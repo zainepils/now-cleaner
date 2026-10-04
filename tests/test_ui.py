@@ -38,12 +38,12 @@ class GuidedUITests(unittest.TestCase):
 
     def test_import_action_disabled_until_files_selected(self):
         self.add_module()
-        self.assertEqual(self.panel.primary_btn.cget('state'), 'disabled')
+        self.assertEqual(str(self.panel.primary_btn.cget('state')), 'disabled')
         self.panel.inputs = [Path('synthetic.zip')]
         self.panel.invalidate()
         self.root.update()
         self.assertEqual(self.panel.primary_btn.cget('text'), 'Check for changes')
-        self.assertEqual(self.panel.primary_btn.cget('state'), 'normal')
+        self.assertEqual(str(self.panel.primary_btn.cget('state')), 'normal')
 
     def test_review_update_and_cancel_states(self):
         self.add_module()
@@ -58,9 +58,9 @@ class GuidedUITests(unittest.TestCase):
         self.panel.busy = self.panel.cancellable = True
         self.panel.render()
         self.root.update()
-        self.assertEqual(self.panel.primary_btn.cget('state'), 'disabled')
+        self.assertEqual(str(self.panel.primary_btn.cget('state')), 'disabled')
         self.assertTrue(self.panel.cancel_btn.winfo_ismapped())
-        self.assertEqual(self.panel.cancel_btn.cget('state'), 'normal')
+        self.assertEqual(str(self.panel.cancel_btn.cget('state')), 'normal')
 
     def test_controls_fit_minimum_window(self):
         self.add_module()
