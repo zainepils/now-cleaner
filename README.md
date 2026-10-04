@@ -7,7 +7,7 @@ The repository's code and documentation are available under the [PolyForm Noncom
 ## Modules & updates
 
 1. Create a module by giving it a name. Folder, NotebookLM link and source-limit settings are optional. Defaults: local files, one NotebookLM notebook per module, 50 source slots, 15 reserved for independently added sources.
-2. Choose a NOW ZIP. Multiple ZIPs can be selected together; folder import is also available under **More**.
+2. Choose **Add download**, then **ZIP files** or **Folder of ZIPs**. Multiple ZIPs can be selected together. First-time guidance explains both options and that you do not need to unzip files yourself.
 3. Check what changed. Unchanged files are hidden by default and files needing decisions are highlighted. Choose **Review selected files** for conflicts or uncertain groups. Partial imports keep missing earlier files; full snapshots only remove files you explicitly approve.
 4. Choose **Prepare upload files**. Stable lecture/seminar packs use four-week ranges, plus assessment/reference packs. Review warnings and the estimated source count.
 5. Choose **Save this update**. Previous revisions remain recoverable through **More > Update history**.

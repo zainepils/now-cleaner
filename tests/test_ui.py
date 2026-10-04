@@ -38,10 +38,10 @@ class GuidedUITests(unittest.TestCase):
 
     def test_import_action_guides_user_to_choose_files(self):
         self.add_module()
-        self.assertEqual(self.panel.primary_btn.cget('text'), 'Choose a NOW ZIP')
+        self.assertEqual(self.panel.primary_btn.cget('text'), 'Add download')
         self.assertEqual(str(self.panel.primary_btn.cget('state')), 'normal')
         self.assertFalse(self.panel.imports.winfo_ismapped())
-        with mock.patch.object(self.panel, 'choose_zips') as choose:
+        with mock.patch.object(self.panel, 'choose_download') as choose:
             self.panel.next_step()
             choose.assert_called_once()
         self.panel.inputs = [Path('synthetic.zip')]
@@ -111,6 +111,29 @@ class GuidedUITests(unittest.TestCase):
         self.panel.toggle_options()
         self.root.update()
         self.assertTrue(self.panel.options.winfo_ismapped())
+
+    def test_add_download_offers_both_file_and_folder_pickers(self):
+        from tkinter import ttk
+        self.add_module()
+        for label, method in [('ZIP files', 'choose_zips'), ('Folder of ZIPs', 'choose_folder')]:
+            self.panel.choose_download()
+            self.root.update()
+            dialog = next(w for w in self.root.winfo_children() if isinstance(w, tk.Toplevel))
+            pane = dialog.winfo_children()[0]
+            button = next(w for w in pane.winfo_children() if isinstance(w, ttk.Button) and w.cget('text') == label)
+            with mock.patch.object(self.panel, method) as picker:
+                button.invoke()
+                picker.assert_called_once()
+
+    def test_download_brief_remains_until_a_picker_succeeds(self):
+        self.add_module()
+        self.assertIn('no need to unzip', self.panel.empty_detail.cget('text'))
+        with mock.patch('now_cleaner.module_ui.filedialog.askopenfilenames', return_value=()):
+            self.panel.choose_zips()
+        self.assertFalse(self.store.setting('download_intro_seen', False))
+        with mock.patch('now_cleaner.module_ui.filedialog.askdirectory', return_value='/tmp/synthetic-zips'):
+            self.panel.choose_folder()
+        self.assertTrue(self.store.setting('download_intro_seen', False))
 
     def test_controls_fit_minimum_window(self):
         self.add_module()

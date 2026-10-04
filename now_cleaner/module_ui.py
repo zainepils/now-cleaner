@@ -63,7 +63,7 @@ class ModulePanel:
         self.more_btn.pack(side='right')
         menu = tk.Menu(self.more_btn, tearoff=False)
         for title, command in [('Module settings', lambda: self.edit_module(True)), ('Google Drive connection', self.drive_setup),
-                               ('Choose a different NOW download', self.choose_zips),
+                               ('Choose a different NOW download', self.choose_download),
                                ('Import a folder of ZIP files', self.choose_folder),
                                ('Import options', self.toggle_options), ('Update history', self.history),
                                ('Retired NotebookLM sources', self.retired_sources), ('Open all source packs', lambda: self.open_folder('Packs')),
@@ -80,8 +80,7 @@ class ModulePanel:
         self.full.trace_add('write', lambda *_: self.invalidate())
         self.imports = ttk.Frame(self.frame, style='Card.TFrame')
         self.imports.pack(fill='x', pady=(0, 16))
-        self.button(self.imports, 'Choose ZIP files', self.choose_zips).pack(side='left')
-        self.button(self.imports, 'Choose a folder', self.choose_folder).pack(side='left', padx=10)
+        self.button(self.imports, 'Change download', self.choose_download).pack(side='left')
         ttk.Label(self.imports, textvariable=self.selection_text, style='Body.TLabel', wraplength=400).pack(side='left', padx=12)
         self.content = ttk.Frame(self.frame, style='Card.TFrame')
         self.content.pack(fill='both', expand=True)
@@ -163,7 +162,7 @@ class ModulePanel:
             else:
                 self.open_folder('Latest Update')
         else:
-            self.preview() if self.inputs else self.choose_zips()
+            self.preview() if self.inputs else self.choose_download()
 
     def render(self):
         if not hasattr(self, 'primary_btn'):
@@ -198,7 +197,9 @@ class ModulePanel:
             elif self.inputs:
                 title, detail, action = ('Ready to check for changes.', 'We will compare this export with your saved module.\nUnchanged files stay untouched, and missing earlier weeks are kept.', 'Check for changes')
             else:
-                title, detail, action = ('Add your NOW download.', 'Download your course material as a ZIP from NOW, then choose it here.\nEarlier weeks stay safe, even if this download only contains new material.', 'Choose a NOW ZIP')
+                detail = ('Choose ZIP files or a folder containing ZIPs.' if self.store.setting('download_intro_seen', False) else
+                          'You can add one or more ZIP downloads from NOW, or a folder containing ZIPs.\nThere is no need to unzip them first. Earlier weeks stay safe when you add new material.')
+                title, action = 'Add your NOW download.', 'Add download'
             self.empty_title.configure(text=title)
             self.empty_detail.configure(text=detail)
             self.steps.configure(text='Finished  -  Your next step' if self.phase == 'complete' else 'Step 1 of 3  -  Add your download' if self.modules else 'Get started')
@@ -320,9 +321,31 @@ class ModulePanel:
         save_btn = ttk.Button(pane, text='Save changes' if editing else 'Create module', command=save)
         save_btn.pack(anchor='e', pady=(15, 0))
 
+    def choose_download(self):
+        if self.busy:
+            return
+        dialog = tk.Toplevel(self.root)
+        dialog.title('Add download')
+        dialog.transient(self.root)
+        dialog.grab_set()
+        pane = ttk.Frame(dialog, padding=24)
+        pane.pack(fill='both', expand=True)
+        ttk.Label(pane, text='What would you like to add?', style='SectionTitle.TLabel').pack(anchor='w')
+        detail = ('Choose one or more NOW ZIP files, or a folder containing ZIPs.\nLeave the ZIP files zipped - NOW Cleaner opens them for you.'
+                  if not self.store.setting('download_intro_seen', False) else 'ZIP files or a folder containing ZIPs.')
+        ttk.Label(pane, text=detail, wraplength=440, justify='left').pack(anchor='w', pady=(10, 20))
+        def pick(callback):
+            dialog.destroy()
+            callback()
+        ttk.Button(pane, text='ZIP files', command=lambda: pick(self.choose_zips)).pack(fill='x', pady=(0, 8))
+        ttk.Button(pane, text='Folder of ZIPs', command=lambda: pick(self.choose_folder)).pack(fill='x')
+        ttk.Button(pane, text='Cancel', command=dialog.destroy).pack(anchor='e', pady=(16, 0))
+        dialog.bind('<Escape>', lambda _: dialog.destroy())
+
     def choose_zips(self):
         paths = filedialog.askopenfilenames(title='Choose NOW ZIP exports', filetypes=[('ZIP exports', '*.zip')])
         if paths:
+            self.store.set_setting('download_intro_seen', True)
             self.inputs = [Path(p) for p in paths]
             self.selection_text.set(f'{len(paths)} ZIP file(s) selected')
             self.invalidate()
@@ -330,6 +353,7 @@ class ModulePanel:
     def choose_folder(self):
         folder = filedialog.askdirectory(title='Folder containing NOW ZIP exports')
         if folder:
+            self.store.set_setting('download_intro_seen', True)
             self.inputs = [Path(folder)]
             self.selection_text.set('Folder: ' + Path(folder).name)
             self.invalidate()
