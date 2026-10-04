@@ -191,7 +191,10 @@ def prepare(store: Store, token: str, decisions: dict | None = None, log=print) 
         retired_remote = [key for key in remotes if key not in packs and not key.startswith('@') and not remotes[key].get('retirement_confirmed')]
         count = len(packs) + len(retired_remote) + module['reserved']
         if count > module['limit']:
-            raise ValueError(f'Estimated sources {count}/{module["limit"]}; adjust the reserved count or pack categories before applying')
+            raise ValueError(f'{len(packs)} upload files plus {module["reserved"]} reserved spaces and '
+                             f'{len(retired_remote)} old linked sources exceed your {module["limit"]}-source budget. '
+                             'Reduce reserved spaces in Module settings or review file categories. '
+                             'Reserved spaces are not uploaded files.')
         revision = uuid4().hex
         result = dict(revision=revision, module=module['id'], base=review['base'], token=token, module_config=module,
                       files=files, packs=packs, changed=changed, retired=retired, warnings=warnings,
@@ -203,7 +206,10 @@ def prepare(store: Store, token: str, decisions: dict | None = None, log=print) 
         checklist += ['', 'RETIRED SOURCES - remove manually from NotebookLM after review:']
         checklist += [old['packs'].get(k, remotes.get(k, {})).get('label', k) for k in sorted(set(retired + retired_remote))]
         checklist += ['', 'Drive-linked mode: update the same Drive files; do not upload duplicates.',
-                      f'Estimated source count: {count}/{module["limit"]} (includes reserved external sources).', '', 'WARNINGS:'] + warnings
+                      f'Files ready for NotebookLM: {len(packs)}. This is not a live NotebookLM source count.',
+                      f'Planning only: {module["reserved"]} spaces reserved for your own uploads; '
+                      f'{len(retired_remote)} old linked sources awaiting removal; '
+                      f'{module["limit"] - count} spaces remaining in your configured budget.', '', 'WARNINGS:'] + warnings
         (stage / 'Reports' / 'Update checklist.txt').write_text('\n'.join(checklist), encoding='utf-8')
         (stage / 'Reports' / 'Update.json').write_text(json.dumps(result, indent=2), encoding='utf-8')
         (preview_dir / 'prepared.json').write_text(json.dumps(result), encoding='utf-8')

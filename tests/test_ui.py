@@ -60,7 +60,7 @@ class GuidedUITests(unittest.TestCase):
         self.panel.inputs = [Path('synthetic.zip')]
         self.panel.show_review({'changes': [], 'counts': {'new': 2}})
         self.root.update()
-        self.assertEqual(self.panel.primary_btn.cget('text'), 'Prepare upload files')
+        self.assertEqual(self.panel.primary_btn.cget('text'), 'Prepare NotebookLM files')
         self.assertTrue(self.panel.table_panel.winfo_ismapped())
         self.panel.prepared = {'synthetic': True}
         self.panel.render()
@@ -91,9 +91,10 @@ class GuidedUITests(unittest.TestCase):
         self.panel.show_unchanged.set(True)
         self.panel.populate_review()
         self.assertEqual(self.panel.tree.get_children(), ('0', '1', '2'))
-        with mock.patch('now_cleaner.module_ui.messagebox.showinfo'), mock.patch.object(self.panel, 'prepare') as prepare:
+        with mock.patch.object(self.panel, 'resolve_selected') as resolve, mock.patch.object(self.panel, 'prepare') as prepare:
             self.panel.next_step()
             prepare.assert_not_called()
+            resolve.assert_called_once()
         self.assertEqual(self.panel.tree.selection(), ('2',))
 
     def test_create_module_only_shows_name_until_options_opened(self):
@@ -148,6 +149,64 @@ class GuidedUITests(unittest.TestCase):
         for button in self.panel.buttons:
             if button.winfo_ismapped():
                 self.assertLessEqual(button.winfo_rootx() + button.winfo_width(), right)
+
+    def test_upload_ready_action_visible_for_saved_module_and_opens_packs(self):
+        self.add_module()
+        with mock.patch.object(self.store, 'snapshot', return_value={'revision': 'saved'}):
+            self.panel.render()
+            self.root.update()
+            self.assertTrue(self.panel.secondary_btn.winfo_ismapped())
+            self.assertEqual(self.panel.secondary_btn.cget('text'), 'Ready for NotebookLM')
+            with mock.patch.object(self.panel, 'open_folder') as open_folder:
+                self.panel.secondary_btn.invoke()
+                open_folder.assert_called_once_with('Packs')
+            self.panel.phase = 'complete'
+            self.panel.render()
+            self.assertEqual(self.panel.primary_btn.cget('text'), 'Open latest upload files')
+            self.assertIn('not the folder', self.panel.empty_detail.cget('text'))
+            with mock.patch.object(self.panel, 'open_folder') as open_folder:
+                self.panel.next_step()
+                open_folder.assert_called_once_with('Latest Update')
+            self.panel.busy = True
+            self.panel.render()
+            self.assertEqual(str(self.panel.secondary_btn.cget('state')), 'disabled')
+
+    def test_unchanged_import_does_not_require_preparing_or_saving(self):
+        self.add_module()
+        self.panel.show_review({'changes': [], 'counts': {'unchanged': 5}})
+        self.assertEqual(self.panel.primary_btn.cget('text'), 'Choose another download')
+        self.assertIn('nothing to upload', self.panel.summary.get())
+        with mock.patch.object(self.panel, 'choose_download') as choose, mock.patch.object(self.panel, 'prepare') as prepare:
+            self.panel.next_step()
+            choose.assert_called_once()
+            prepare.assert_not_called()
+
+    def test_category_decision_is_explained_in_row_and_primary_button(self):
+        self.add_module()
+        change = dict(key='glossary', path='Glossary.pdf', status='new',
+                      candidates=[dict(group='Reference', review=True)])
+        self.panel.show_review(dict(changes=[change], counts={'new': 1}))
+        self.assertEqual(self.panel.primary_btn.cget('text'), 'Choose category')
+        self.assertEqual(self.panel.tree.set('0', 'pack'), 'Confirm category: Reference')
+
+    def test_prepared_upload_list_counts_real_files_not_reserved_spaces(self):
+        self.add_module()
+        self.panel.show_review(dict(token='demo', changes=[], counts={'new': 5}))
+        packs = {str(i): {'filename': f'Lecture {i}.pdf'} for i in range(5)}
+        result = dict(packs=packs, changed=['0', '1'], retired=['old'], warnings=[], estimated_sources=20)
+        previous = {'packs': {'0': packs['0'], 'old': {'filename': 'Old.pdf'}}}
+        with mock.patch.object(self.store, 'snapshot', return_value=previous), mock.patch.object(self.panel, 'work') as work:
+            self.panel.prepare()
+            work.call_args.args[2](result)
+        self.root.update()
+        self.assertTrue(self.panel.prepared_panel.winfo_ismapped())
+        self.assertFalse(self.panel.table_panel.winfo_ismapped())
+        self.assertIn('5 files ready', self.panel.upload_summary.get())
+        self.assertIn('1 to add, 1 to replace, 1 old sources to remove', self.panel.upload_summary.get())
+        self.assertNotIn('20', self.panel.upload_summary.get())
+        rows = [self.panel.upload_tree.item(i, 'values') for i in self.panel.upload_tree.get_children()]
+        self.assertEqual(rows, [('Replace old version', 'Lecture 0.pdf'), ('Add new source', 'Lecture 1.pdf'),
+                                ('Remove old source', 'Old.pdf')])
 
 
 if __name__ == '__main__':

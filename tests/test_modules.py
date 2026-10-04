@@ -112,7 +112,7 @@ class ModuleTests(unittest.TestCase):
         self.store.save_module('Marketing', Path(self.module['root']).parent, limit=2, reserved=1, module_id=self.module['id'])
         self.export({'Lecture/a.txt': 'a', 'Seminar/b.txt': 'b'})
         review = engine.preview(self.store, self.module['id'], [self.zip], log=lambda _: None)
-        with self.assertRaisesRegex(ValueError, 'Estimated sources'):
+        with self.assertRaisesRegex(ValueError, 'upload files plus.*reserved spaces'):
             engine.prepare(self.store, review['token'], log=lambda _: None)
         self.assertIsNone(self.store.snapshot(self.module['id'])['revision'])
 

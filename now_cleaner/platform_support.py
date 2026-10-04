@@ -22,7 +22,14 @@ def open_path(path):
         subprocess.Popen(['xdg-open', str(path)])
 
 
-def open_url(url):
+def open_url(url, prefer_chrome=False):
+    if prefer_chrome and sys.platform == 'darwin':
+        try:
+            subprocess.run(['open', '-a', 'Google Chrome', url], check=True,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10)
+            return
+        except (OSError, subprocess.SubprocessError):
+            pass
     webbrowser.open(url)
 
 

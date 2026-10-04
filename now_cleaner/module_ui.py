@@ -67,7 +67,9 @@ class ModulePanel:
                                ('Choose a different NOW download', self.choose_download),
                                ('Import a folder of ZIP files', self.choose_folder),
                                ('Import options', self.toggle_options), ('Update history', self.history),
-                               ('Retired NotebookLM sources', self.retired_sources), ('Open all source packs', lambda: self.open_folder('Packs')),
+                               ('Retired NotebookLM sources', self.retired_sources),
+                               ('Open organised originals (not upload-ready)', lambda: self.open_folder('Current Files')),
+                               ('Open update instructions', lambda: self.open_folder('Reports')),
                                ('How to use NOW Cleaner', self.help), ('Privacy and your data', self.privacy)]:
             menu.add_command(label=title, command=command)
         self.more_btn.configure(menu=menu)
@@ -95,7 +97,7 @@ class ModulePanel:
         review_row = ttk.Frame(self.table_panel, style='Card.TFrame')
         review_row.pack(fill='x', pady=(0, 10))
         ttk.Label(review_row, textvariable=self.summary, style='SectionTitle.TLabel', wraplength=540).pack(side='left')
-        self.review_btn = self.button(review_row, 'Review selected files', self.resolve_selected)
+        self.review_btn = self.button(review_row, 'Choose category', self.resolve_selected)
         self.review_btn.pack(side='right')
         ttk.Checkbutton(self.table_panel, text='Also show files that have not changed', variable=self.show_unchanged,
                         command=self.populate_review).pack(anchor='w', pady=(0, 8))
@@ -112,6 +114,23 @@ class ModulePanel:
         self.tree.bind('<Double-1>', lambda _: self.resolve_selected())
         self.tree.bind('<<TreeviewSelect>>', lambda _: self.update_review_button())
         self.tree.tag_configure('attention', background='#fff3df')
+        self.prepared_panel = ttk.Frame(self.content, style='Card.TFrame')
+        self.upload_summary = tk.StringVar()
+        ttk.Label(self.prepared_panel, textvariable=self.upload_summary, style='SectionTitle.TLabel',
+                  wraplength=850).pack(anchor='w', pady=(0, 12))
+        ttk.Label(self.prepared_panel, text='These are the files you will upload, not the original course downloads.\n'
+                  'Replace means remove the old version from NotebookLM, then upload this one.',
+                  style='Body.TLabel', wraplength=850).pack(anchor='w', pady=(0, 12))
+        upload_table = ttk.Frame(self.prepared_panel, style='Card.TFrame')
+        upload_table.pack(fill='both', expand=True)
+        self.upload_tree = ttk.Treeview(upload_table, columns=('action', 'file'), show='headings', height=8)
+        for key, title, width in [('action', 'In NotebookLM', 170), ('file', 'File to upload', 650)]:
+            self.upload_tree.heading(key, text=title)
+            self.upload_tree.column(key, width=width, minwidth=100)
+        self.upload_tree.pack(side='left', fill='both', expand=True)
+        upload_scroll = ttk.Scrollbar(upload_table, orient='vertical', command=self.upload_tree.yview)
+        upload_scroll.pack(side='right', fill='y')
+        self.upload_tree.configure(yscrollcommand=upload_scroll.set)
         self.progress = ttk.Progressbar(self.frame, mode='indeterminate')
         self.bottom = ttk.Frame(self.frame, style='Card.TFrame')
         self.bottom.pack(side='bottom', fill='x', before=self.content, pady=(20, 12))
@@ -119,7 +138,7 @@ class ModulePanel:
         self.primary_btn.pack(side='right')
         self.cancel_btn = self.button(self.bottom, 'Cancel', self.cancel.set)
         self.cancel_btn.configure(state='disabled')
-        self.secondary_btn = self.button(self.bottom, 'Open course files', lambda: self.open_folder('Current Files'))
+        self.secondary_btn = self.button(self.bottom, 'Ready for NotebookLM', lambda: self.open_folder('Packs'))
         self.notebook_btn = self.button(self.bottom, 'Open NotebookLM', self.open_notebook)
         ttk.Label(self.frame, textvariable=self.status, style='Body.TLabel', wraplength=920).pack(side='bottom', anchor='w', before=self.bottom)
         self.render()
@@ -137,10 +156,14 @@ class ModulePanel:
             '1. Create a module\nGive it the name you recognise from NOW. No Google setup is needed for local files.\n\n'
             '2. Add a download\nExport course material from NOW as a ZIP, then choose it here. You can select several ZIPs together. '
             'For a folder containing ZIPs, use More > Import a folder of ZIP files.\n\n'
-            '3. Check what changed\nUnchanged files are hidden. Highlighted files need a decision; select one and choose Review selected files. '
+            '3. Check what changed\nUnchanged files are hidden. Yellow rows need a category or version decision. '
+            'The main button takes you straight to the first decision. '
             'Missing earlier weeks are kept by default.\n\n'
             '4. Prepare and save\nPrepare upload files, check any warnings, then save the update. Your original downloads are never changed.\n\n'
-            '5. Update NotebookLM\nOpen files to upload and follow the included checklist. Google Drive is optional and requires setup. '
+            '5. Upload to NotebookLM\nClick Ready for NotebookLM. Drag the files INSIDE that folder into NotebookLM, not the folder itself. '
+            'These files are prepared for upload; organised originals may include unsupported formats such as HTML. '
+            'For later updates, Open latest upload files shows only new or changed files. Read More > Open update instructions '
+            'to see which old sources to remove before uploading replacements. Google Drive is optional and requires setup. '
             'Saving locally or sending files to Drive is not confirmation that NotebookLM has updated.\n\n'
             'Next time\nChoose the same module and add the new NOW download. Previous saved versions remain in More > Update history.')
 
@@ -156,11 +179,14 @@ class ModulePanel:
         elif self.prepared:
             self.apply()
         elif self.review:
+            if self.no_changes():
+                self.choose_download()
+                return
             pending = [str(i) for i, change in enumerate(self.review['changes']) if self.needs_decision(change)]
             if pending:
                 self.tree.selection_set(pending[0])
                 self.tree.see(pending[0])
-                messagebox.showinfo('A quick check is needed', 'Please review the highlighted files first. Select a file, then choose Review selected files. Your files have not been changed.')
+                self.resolve_selected()
             else:
                 self.prepare()
         elif self.phase == 'complete':
@@ -176,6 +202,7 @@ class ModulePanel:
             return
         self.empty.pack_forget()
         self.table_panel.pack_forget()
+        self.prepared_panel.pack_forget()
         self.cancel_btn.pack_forget()
         self.secondary_btn.pack_forget()
         self.notebook_btn.pack_forget()
@@ -189,18 +216,29 @@ class ModulePanel:
             self.imports.pack_forget()
             if not self.modules:
                 self.options.pack_forget()
-        if self.review:
+        if self.prepared:
+            self.prepared_panel.pack(fill='both', expand=True)
+            action = 'Save this update'
+            self.steps.configure(text='Step 3 of 3  -  Check your upload files and save')
+        elif self.review:
             self.table_panel.pack(fill='both', expand=True)
-            action = 'Save this update' if self.prepared else 'Prepare upload files'
-            self.steps.configure(text='Step 2 of 3  -  Check what changed' if not self.prepared else 'Step 3 of 3  -  Save your update')
+            pending = [c for c in self.review['changes'] if self.needs_decision(c)]
+            action = ('Choose another download' if self.no_changes() else
+                      self.decision_label(pending[0]) if pending else 'Prepare NotebookLM files')
+            self.steps.configure(text='Nothing to update' if self.no_changes() else 'Step 2 of 3  -  Check what changed')
         else:
             self.empty.pack(fill='both', expand=True)
             if not self.modules:
                 title, detail, action = ('Your courses, kept up to date.',
                     'Start by saving a module name. Then bring in your NOW exports whenever new teaching material is published.\n\nWe will show you what changed before updating anything.', 'Create your first module')
             elif self.phase == 'complete':
-                title, detail = ('Your course files are ready.', 'Previous versions are kept in update history.\n\n' + ('Next, send the upload files to Google Drive. NotebookLM updates still need checking separately.' if self.module()['mode'] == 'drive' else 'Open the latest update to find your upload files and a checklist for NotebookLM.'))
-                action = 'Send to Google Drive' if self.module()['mode'] == 'drive' else 'Open files to upload'
+                title, detail = ('Ready for NotebookLM.', 'Your update is saved. Your original downloads are untouched.\n\n' + (
+                    'Next, send the upload files to Google Drive. NotebookLM updates still need checking separately.'
+                    if self.module()['mode'] == 'drive' else
+                    'First upload: click Ready for NotebookLM below.\nDrag the files inside that folder into NotebookLM, not the folder.\n\n'
+                    'Updating an existing notebook? Open latest upload files.\nReplace old versions of changed sources; add genuinely new ones.\n'
+                    'See More > Open update instructions for the replacement list.'))
+                action = 'Send to Google Drive' if self.module()['mode'] == 'drive' else 'Open latest upload files'
             elif self.inputs:
                 title, detail, action = ('Ready to check for changes.', 'We will compare this export with your saved module.\nUnchanged files stay untouched, and missing earlier weeks are kept.', 'Check for changes')
             else:
@@ -225,8 +263,9 @@ class ModulePanel:
         self.update_review_button()
         if self.modules and self.store.snapshot(self.module()['id']).get('revision'):
             self.secondary_btn.pack(side='left')
-            if self.module()['notebook']:
-                self.notebook_btn.pack(side='left', padx=10)
+            self.secondary_btn.configure(state='disabled' if self.busy else 'normal')
+            self.notebook_btn.pack(side='left', padx=10)
+            self.notebook_btn.configure(state='disabled' if self.busy else 'normal')
 
     def module(self):
         index = self.combo.current()
@@ -255,7 +294,7 @@ class ModulePanel:
             module = self.module()
             snapshot = self.store.snapshot(module['id'])
             mode = 'Google Drive linked' if module['mode'] == 'drive' else 'Local files'
-            self.info.configure(text=f'{mode}  |  ' + ('Ready for your next download' if snapshot.get('revision') else 'Start by adding a NOW download'))
+            self.info.configure(text=f'{mode}  |  ' + (f'{len(snapshot["packs"])} files ready for NotebookLM' if snapshot.get('revision') else 'Start by adding a NOW download'))
             self.status.set('Earlier weeks are kept. Nothing changes until you save the update.')
             if snapshot.get('revision'):
                 try:
@@ -441,7 +480,8 @@ class ModulePanel:
         self.prepared = None
         self.decisions = {}
         self.populate_review()
-        self.status.set('Highlighted files need your decision. Other files are handled automatically. Nothing has been saved yet.')
+        self.status.set('Already saved: no files need updating.' if self.no_changes() else
+                        'Yellow rows need a category or version decision. Earlier weeks are kept. Nothing has been saved yet.')
         self.render()
 
     def needs_decision(self, change):
@@ -449,9 +489,20 @@ class ModulePanel:
             return False
         return change['status'] in ('conflict', 'possible rename', 'duplicate content') or any(c['review'] for c in change['candidates'])
 
+    def no_changes(self):
+        return bool(self.review) and not any(count for status, count in self.review['counts'].items() if status != 'unchanged')
+
+    @staticmethod
+    def decision_label(change):
+        return {'conflict': 'Choose a version', 'possible rename': 'Check renamed file',
+                'duplicate content': 'Check duplicate', 'missing': 'Keep or remove file'}.get(change['status'], 'Choose category')
+
     def update_review_button(self):
         if hasattr(self, 'review_btn'):
-            self.review_btn.configure(state='normal' if self.review and self.tree.selection() and not self.busy else 'disabled')
+            selected = self.tree.selection()
+            change = self.review['changes'][int(selected[0])] if self.review and selected else None
+            self.review_btn.configure(text=self.decision_label(change) if change else 'Choose category',
+                                      state='normal' if change and not self.busy and not self.prepared else 'disabled')
 
     def populate_review(self):
         if not self.review:
@@ -465,6 +516,8 @@ class ModulePanel:
             if decision:
                 group = 'Skip duplicate approved' if decision.get('skip') else 'Remove approved' if decision.get('remove') else decision.get('group', 'Keep existing')
             attention = self.needs_decision(change)
+            if attention and change['status'] not in ('conflict', 'possible rename', 'duplicate content'):
+                group = f'Confirm category: {group}'
             label = {'new': 'New', 'changed': 'Updated', 'unchanged': 'No change', 'missing': 'Not in download',
                      'conflict': 'Choose a version', 'possible rename': 'Check file name', 'duplicate content': 'Check duplicate'}.get(change['status'], change['status'])
             self.tree.insert('', 'end', iid=str(index), values=(label, change['path'], group), tags=('attention',) if attention else ())
@@ -472,11 +525,13 @@ class ModulePanel:
             counts = self.review['counts']
             attention = sum(self.needs_decision(c) for c in self.review['changes'])
             self.summary.set(f'{counts.get("new", 0)} new  |  {counts.get("changed", 0)} updated  |  {counts.get("unchanged", 0)} unchanged\n' +
-                             (f'{attention} files need your decision (highlighted below).' if attention else 'No decisions needed. You can prepare your upload files.'))
+                             ('These files are already saved. There is nothing to upload.' if self.no_changes() else
+                              f'{attention} files need a category or version decision. Use the button below.' if attention else
+                              'Earlier files stay saved. Ready to prepare your NotebookLM files.'))
         self.update_review_button()
 
     def resolve_selected(self):
-        if self.busy or not self.review:
+        if self.busy or not self.review or self.prepared:
             return
         chosen = self.tree.selection()
         if not chosen:
@@ -512,7 +567,7 @@ class ModulePanel:
                 if len(chosen) > 1 and 'batch_group' in locals():
                     group = batch_group
                 else:
-                    group = self.choose_group(initial)
+                    group = self.choose_group(initial, change['path'])
                     batch_group = group
                 if not group:
                     continue
@@ -523,15 +578,17 @@ class ModulePanel:
         self.populate_review()
         self.render()
 
-    def choose_group(self, initial):
+    def choose_group(self, initial, filename=''):
         dialog = tk.Toplevel(self.root)
         dialog.title('Where does this material belong?')
         dialog.transient(self.root)
         dialog.grab_set()
         pane = ttk.Frame(dialog, padding=24)
         pane.pack(fill='both', expand=True)
-        ttk.Label(pane, text='Choose an upload group', style='SectionTitle.TLabel').pack(anchor='w')
-        ttk.Label(pane, text='Related files are combined to use fewer NotebookLM sources.\nChoose a suggested group, or type your own name.',
+        ttk.Label(pane, text='Choose a category', style='SectionTitle.TLabel').pack(anchor='w')
+        if filename:
+            ttk.Label(pane, text=filename, wraplength=460).pack(anchor='w', pady=(8, 0))
+        ttk.Label(pane, text='Lectures and seminars are grouped by teaching week.\nUse Reference for glossaries, reading lists and general notes.\nThe suggested category is selected below; confirm it if it fits.',
                   wraplength=460).pack(anchor='w', pady=12)
         groups = {initial, 'Assessment', 'Reference'}
         for change in self.review['changes']:
@@ -551,7 +608,7 @@ class ModulePanel:
         row = ttk.Frame(pane)
         row.pack(fill='x', pady=(20, 0))
         ttk.Button(row, text='Decide later', command=dialog.destroy).pack(side='left')
-        ttk.Button(row, text='Use this group', command=accept).pack(side='right')
+        ttk.Button(row, text='Confirm category', command=accept).pack(side='right')
         dialog.bind('<Escape>', lambda _: dialog.destroy())
         self.root.wait_window(dialog)
         return result[0] if result else None
@@ -564,12 +621,22 @@ class ModulePanel:
         decisions = json.loads(json.dumps(self.decisions))
         def completed(result):
             self.prepared = result
-            self.summary.set(f'{len(result["changed"])} upload files updated  |  {len(result["retired"])} old groups no longer used\nEstimated NotebookLM spaces used: {result["estimated_sources"]} of {self.module()["limit"]} (including your reserved spaces)')
-            self.status.set('Your upload files are prepared. Check any warnings, then save this update.')
+            previous = self.store.snapshot(self.module()['id'])['packs']
+            added = sum(key not in previous for key in result['changed'])
+            self.upload_summary.set(f'{len(result["packs"])} files ready for NotebookLM\n'
+                                    f'This update: {added} to add, {len(result["changed"]) - added} to replace, '
+                                    f'{len(result["retired"])} old sources to remove.')
+            self.upload_tree.delete(*self.upload_tree.get_children())
+            for key in result['changed']:
+                self.upload_tree.insert('', 'end', values=('Replace old version' if key in previous else 'Add new source',
+                                                         result['packs'][key]['filename']))
+            for key in result['retired']:
+                self.upload_tree.insert('', 'end', values=('Remove old source', previous[key]['filename']))
+            self.status.set('Nothing has been uploaded to NotebookLM. Save these files first, then upload them yourself.')
             self.render()
             if result['warnings']:
                 self.show_details('Review Pack Warnings', '\n\n'.join(result['warnings']))
-        self.work('Preparing stable source packs...', lambda: engine.prepare(self.store, token, decisions, self.log), completed)
+        self.work('Preparing files for NotebookLM...', lambda: engine.prepare(self.store, token, decisions, self.log), completed)
 
     def apply(self):
         if not self.prepared:
@@ -583,7 +650,7 @@ class ModulePanel:
             self.review = self.prepared = None
             self.phase = 'complete'
             self.status.set('Saved successfully. Your next step is shown above.')
-            self.info.configure(text=f'{len(snapshot["packs"])} source packs  /  Estimated notebook sources: {snapshot["estimated_sources"]} of {self.module()["limit"]}')
+            self.info.configure(text=f'{len(snapshot["packs"])} files ready for NotebookLM  |  Saved on your computer')
             self.render()
         self.work('Applying local update...', lambda: engine.apply(self.store, result['token'], self.log), completed)
 
@@ -628,8 +695,8 @@ class ModulePanel:
         try:
             link = self.module()['notebook']
             if not link:
-                raise ValueError('Add a NotebookLM link in Module Settings')
-            platform.open_url(link)
+                link = 'https://notebooklm.google.com/'
+            platform.open_url(link, prefer_chrome=True)
         except ValueError as exc:
             messagebox.showinfo('Notebook', str(exc))
 

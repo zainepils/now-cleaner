@@ -38,10 +38,12 @@ provide evidence you can inspect; they do not prove the app is free of vulnerabi
 
 1. Create a module by giving it a name. Folder, NotebookLM link and source-limit settings are optional. Defaults: local files, one NotebookLM notebook per module, 50 source slots, 15 reserved for independently added sources.
 2. Choose **Add download**, then **ZIP files** or **Folder of ZIPs**. Multiple ZIPs can be selected together. First-time guidance explains both options and that you do not need to unzip files yourself.
-3. Check what changed. Unchanged files are hidden by default and files needing decisions are highlighted. Choose **Review selected files** for conflicts or uncertain groups. Partial imports keep missing earlier files; full snapshots only remove files you explicitly approve.
-4. Choose **Prepare upload files**. Stable lecture/seminar packs use four-week ranges, plus assessment/reference packs. Review warnings and the estimated source count.
+3. Check what changed. Yellow rows explain category or version decisions; the main button opens the next decision directly. Unchanged imports show that there is nothing to upload. Partial imports keep missing earlier files; full snapshots only remove files you explicitly approve.
+4. Choose **Prepare NotebookLM files**. Review the upload preview: it lists files to add, replace or remove. The displayed file count excludes reserved spaces and is not a live NotebookLM source count. Stable lecture/seminar packs use four-week ranges, plus assessment/reference packs.
 5. Choose **Save this update**. Previous revisions remain recoverable through **More > Update history**.
-6. Choose **Open files to upload** for local uploads, or **Send to Google Drive** after completing [Drive setup and the synthetic sync test](docs/drive-setup.md). Neither action verifies that NotebookLM has updated.
+6. For the first upload, click **Ready for NotebookLM** and upload the files inside that folder, not the folder itself. For later updates, **Open latest upload files** shows only new or changed files. Remove old versions of replacement sources from NotebookLM before uploading their replacements; leave unchanged sources alone. The replacement checklist is under **More > Open update instructions**. Organised originals are kept separately and may include formats unsuitable for direct upload, such as HTML.
+
+**Open NotebookLM** uses Chrome on macOS, falling back to your default browser if Chrome is unavailable. Optional **Send to Google Drive** requires [Drive setup and the synthetic sync test](docs/drive-setup.md). Local saves and Drive uploads do not verify that NotebookLM has updated.
 
 The app shows one primary next action, with progress feedback while working. Optional settings, folder imports, history and a plain-language guide are under **More**. Switching modules clears the selected download and resets full-snapshot mode to prevent accidental imports into another module.
 
