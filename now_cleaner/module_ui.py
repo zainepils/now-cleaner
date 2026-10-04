@@ -10,6 +10,7 @@ from tkinter import filedialog, messagebox, simpledialog, ttk
 
 from .store import Store
 from . import engine
+from . import platform_support as platform
 
 
 class ModulePanel:
@@ -42,7 +43,7 @@ class ModulePanel:
     def button(self, parent, text, command, primary=False):
         style = 'GuidedPrimary.TButton' if primary else 'GuidedSecondary.TButton'
         theme = ttk.Style()
-        theme.configure(style, font=('Avenir Next', 12, 'bold' if primary else 'normal'), padding=(18, 10), borderwidth=0, relief='flat')
+        theme.configure(style, font=(platform.FONT_FAMILY, 12, 'bold' if primary else 'normal'), padding=(18, 10), borderwidth=0, relief='flat')
         theme.map(style, background=[('disabled', '#e5ece9'), ('active', '#12584f' if primary else '#dce9e6'), ('!disabled', '#176b62' if primary else '#edf3f2')],
                   foreground=[('disabled', '#819490'), ('!disabled', '#ffffff' if primary else '#23443f')])
         btn = ttk.Button(parent, text=text, command=command, style=style, cursor='hand2')
@@ -58,7 +59,7 @@ class ModulePanel:
         self.combo.bind('<<ComboboxSelected>>', lambda _: self.on_select())
         self.new_module_btn = self.button(row, '+ New module', lambda: self.edit_module(False))
         self.new_module_btn.pack(side='left', padx=12)
-        self.more_btn = tk.Menubutton(row, text='More  ...', font=('Avenir Next', 12), bg='#ffffff', fg='#46615c',
+        self.more_btn = tk.Menubutton(row, text='More  ...', font=(platform.FONT_FAMILY, 12), bg='#ffffff', fg='#46615c',
                                       relief='flat', padx=14, pady=10, cursor='hand2')
         self.more_btn.pack(side='right')
         menu = tk.Menu(self.more_btn, tearoff=False)
@@ -85,9 +86,9 @@ class ModulePanel:
         self.content = ttk.Frame(self.frame, style='Card.TFrame')
         self.content.pack(fill='both', expand=True)
         self.empty = tk.Frame(self.content, bg='#f3f7f5', padx=42, pady=35)
-        self.empty_title = tk.Label(self.empty, text='', font=('Avenir Next', 24, 'bold'), bg='#f3f7f5', fg='#193f37', anchor='w')
+        self.empty_title = tk.Label(self.empty, text='', font=(platform.FONT_FAMILY, 24, 'bold'), bg='#f3f7f5', fg='#193f37', anchor='w')
         self.empty_title.pack(anchor='w', pady=(0, 12))
-        self.empty_detail = tk.Label(self.empty, text='', font=('Avenir Next', 13), bg='#f3f7f5', fg='#526b63',
+        self.empty_detail = tk.Label(self.empty, text='', font=(platform.FONT_FAMILY, 13), bg='#f3f7f5', fg='#526b63',
                                      justify='left', wraplength=660)
         self.empty_detail.pack(anchor='w')
         self.table_panel = ttk.Frame(self.content, style='Card.TFrame')
@@ -314,7 +315,8 @@ class ModulePanel:
         options_btn.pack(anchor='w', pady=(12, 0))
         mode = tk.StringVar(value=current['mode'] if current else 'local')
         drive_enabled = tk.BooleanVar(value=mode.get() == 'drive')
-        ttk.Checkbutton(advanced, text='Use Google Drive (requires connection and a NotebookLM sync test)',
+        ttk.Checkbutton(advanced, text='Google Drive unavailable in Windows preview' if platform.WINDOWS else 'Use Google Drive (requires connection and a NotebookLM sync test)',
+                        state='disabled' if platform.WINDOWS else 'normal',
                         variable=drive_enabled, command=lambda: mode.set('drive' if drive_enabled.get() else 'local')).pack(anchor='w', pady=10)
         def save():
             try:
@@ -591,7 +593,7 @@ class ModulePanel:
         dialog.geometry('780x520')
         dialog.transient(self.root)
         dialog.grab_set()
-        text = tk.Text(dialog, wrap='word', font=('Avenir Next', 11), padx=16, pady=16)
+        text = tk.Text(dialog, wrap='word', font=(platform.FONT_FAMILY, 11), padx=16, pady=16)
         scroll = ttk.Scrollbar(dialog, command=text.yview)
         scroll.pack(side='right', fill='y')
         text.pack(fill='both', expand=True)
@@ -615,10 +617,10 @@ class ModulePanel:
 
     def open_folder(self, name):
         try:
-            path = Path(self.module()['root']) / name
+            path = self.store.folder_path(self.module()['id'], name)
             if not path.exists():
                 raise ValueError('Apply an update first')
-            subprocess.Popen(['open', str(path)])
+            platform.open_path(path)
         except ValueError as exc:
             messagebox.showinfo('Folder', str(exc))
 
@@ -627,7 +629,7 @@ class ModulePanel:
             link = self.module()['notebook']
             if not link:
                 raise ValueError('Add a NotebookLM link in Module Settings')
-            subprocess.Popen(['open', link])
+            platform.open_url(link)
         except ValueError as exc:
             messagebox.showinfo('Notebook', str(exc))
 
@@ -646,7 +648,7 @@ class ModulePanel:
             listing.insert('end', row['created'] + '  [' + row['id'][:8] + ']')
         def open_revision():
             if listing.curselection():
-                subprocess.Popen(['open', str(Path(module['root']) / 'revisions' / rows[listing.curselection()[0]]['id'])])
+                platform.open_path(Path(module['root']) / 'revisions' / rows[listing.curselection()[0]]['id'])
         ttk.Button(dialog, text='Open Selected Revision', command=open_revision).pack(pady=(0, 15))
 
     def retired_sources(self):
@@ -668,6 +670,9 @@ class ModulePanel:
             messagebox.showinfo('Retired Sources', str(exc))
 
     def drive_setup(self):
+        if platform.WINDOWS:
+            messagebox.showinfo('Windows preview', 'Google Drive is not available in this preview. Use local files and the upload checklist instead.')
+            return
         from . import drive
         dialog = tk.Toplevel(self.root)
         dialog.title('Google Drive Setup & Sync Verification')
@@ -725,10 +730,10 @@ class ModulePanel:
             guide_window = tk.Toplevel(self.root)
             guide_window.title('Personal Drive Setup Guide')
             guide_window.geometry('780x650')
-            text = tk.Text(guide_window, wrap='word', font=('Avenir Next', 11), padx=20, pady=18)
+            text = tk.Text(guide_window, wrap='word', font=(platform.FONT_FAMILY, 11), padx=20, pady=18)
             text.pack(fill='both', expand=True)
             location = Path(__file__).resolve().parents[1] / 'docs' / 'drive-setup.md'
             text.insert('end', location.read_text(encoding='utf-8') if location.is_file() else instructions)
             text.configure(state='disabled')
-            ttk.Button(guide_window, text='Open Google Cloud Console', command=lambda: subprocess.Popen(['open', 'https://console.cloud.google.com/'])).pack(pady=8)
+            ttk.Button(guide_window, text='Open Google Cloud Console', command=lambda: platform.open_url('https://console.cloud.google.com/')).pack(pady=8)
         self.button(pane, 'Open Setup Guide', guide).pack(fill='x', pady=3)

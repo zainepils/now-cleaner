@@ -63,9 +63,10 @@ def visual_pdf(src: Path, target: Path) -> None:
             import zipfile
             with zipfile.ZipFile(src) as zf:
                 validate_archive(zf, nested=True)
-        soffice = shutil.which('soffice') or '/Applications/LibreOffice.app/Contents/MacOS/soffice'
-        if not Path(soffice).is_file():
-            raise ValueError('LibreOffice is required for visual Office packs')
+        from .platform_support import find_office
+        soffice = find_office()
+        if not soffice:
+            raise ValueError('Install LibreOffice to prepare visual Word/PowerPoint packs, then try again.')
         with tempfile.TemporaryDirectory(prefix='now-office-') as folder:
             work = Path(folder)
             # Each conversion gets its own profile, preventing an existing GUI instance from taking over.

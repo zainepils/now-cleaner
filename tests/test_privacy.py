@@ -41,7 +41,7 @@ class PrivacyTests(unittest.TestCase):
                  mock.patch.object(socket.socket, 'connect_ex', side_effect=AssertionError('Unexpected network connection')) as connect_ex, \
                  mock.patch('urllib.request.urlopen', side_effect=AssertionError('Unexpected HTTP request')) as request, \
                  mock.patch.object(cleaner, 'load_api_key', return_value=''), \
-                 mock.patch.dict(os.environ, {'HOME': str(root), 'OPENAI_API_KEY': ''}), \
+                 mock.patch.dict(os.environ, {'HOME': str(root), 'USERPROFILE': str(root), 'OPENAI_API_KEY': ''}), \
                  mock.patch.object(sys, 'argv', ['cleaner', '--source', str(source)]), \
                  contextlib.redirect_stdout(io.StringIO()):
                 self.assertEqual(cleaner.main(), 0)

@@ -350,6 +350,9 @@ def sanitize_name(name: str) -> str:
     # Keep readable names but strip filesystem-problem chars.
     clean = name.replace("/", "-").replace("\\", "-").replace(":", " -")
     clean = re.sub(r"[\x00-\x1f]", "", clean)
+    clean = re.sub(r'[<>"|?*]', '-', clean).rstrip(' .')
+    if re.match(r'^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\.|$)', clean, re.IGNORECASE):
+        clean = '_' + clean
     clean = re.sub(r"\s+", " ", clean).strip()
     return clean or "untitled"
 

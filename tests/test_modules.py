@@ -174,6 +174,12 @@ class ModuleTests(unittest.TestCase):
 
     def test_links_can_be_recovered_after_restart(self):
         result = self.import_files({'Lecture/a.txt': 'a'})
+        from now_cleaner.platform_support import WINDOWS
+        if WINDOWS:
+            restarted = Store(self.store.state)
+            restarted.publish_links(self.module['id'])
+            self.assertEqual(restarted.folder_path(self.module['id'], 'Current Files'), Path(result['revision_path']) / 'Current Files')
+            return
         link = Path(self.module['root']) / 'Current Files'
         link.unlink()
         Store(self.store.state).publish_links(self.module['id'])

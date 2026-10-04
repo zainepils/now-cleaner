@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import contextlib
-import fcntl
 import json
 import os
 import sqlite3
@@ -10,9 +9,12 @@ from uuid import uuid4
 from urllib.parse import urlparse
 
 import clean_now_notebooklm as legacy
+from . import platform_support as platform
 
 
 def default_state() -> Path:
+    if platform.WINDOWS:
+        return Path(os.environ.get('LOCALAPPDATA') or Path.home() / 'AppData' / 'Local') / 'NOW Cleaner'
     return Path.home() / 'Library' / 'Application Support' / 'NOW Cleaner'
 
 
@@ -32,7 +34,8 @@ class Store:
                 CREATE TABLE IF NOT EXISTS remote(module TEXT NOT NULL, pack TEXT NOT NULL, data TEXT NOT NULL, PRIMARY KEY(module,pack));
                 PRAGMA user_version=1;
             ''')
-        os.chmod(self.db, 0o600)
+        if not platform.WINDOWS:
+            os.chmod(self.db, 0o600)
 
     @contextlib.contextmanager
     def connect(self):
@@ -63,6 +66,8 @@ class Store:
             raise ValueError('Enter a module name of 1-100 characters, without slashes or control characters')
         if mode not in ('local', 'drive') or not 1 <= limit <= 300 or not 0 <= reserved < limit:
             raise ValueError('Invalid mode or source budget')
+        if platform.WINDOWS and mode == 'drive':
+            raise ValueError('Google Drive is not available in the Windows preview. Use local files.')
         if notebook:
             parsed = urlparse(notebook)
             if parsed.scheme != 'https' or parsed.hostname not in ('notebooklm.google.com', 'notebook.google.com'):
@@ -70,11 +75,13 @@ class Store:
         module_id = module_id or uuid4().hex
         previous = self.module(module_id) if any(m['id'] == module_id for m in self.modules()) else None
         parent = destination.expanduser().resolve()
+        if platform.WINDOWS and parent.drive.casefold() != self.state.drive.casefold():
+            raise ValueError('For this preview, choose a save folder on the same drive as your Windows user profile.')
         parent.mkdir(parents=True, exist_ok=True)
         root = Path(previous['root']) if previous else parent / f'{legacy.sanitize_name(name)}-{module_id[:8]}'
         if previous and root.parent != parent:
             raise ValueError('Changing destinations is not supported; create a new module instead')
-        if root.is_symlink():
+        if platform.is_link(root):
             raise ValueError('Module destination cannot be a symlink')
         marker = root / '.now-module.json'
         if root.exists() and (not marker.is_file() or json.loads(marker.read_text()).get('id') != module_id):
@@ -129,7 +136,24 @@ class Store:
     def lock(self, module_id: str):
         locks = self.state / 'locks'
         locks.mkdir(exist_ok=True)
-        with (locks / f'{module_id}.lock').open('a') as stream:
+        with (locks / f'{module_id}.lock').open('a+b') as stream:
+            if platform.WINDOWS:
+                import msvcrt
+                if stream.seek(0, os.SEEK_END) == 0:
+                    stream.write(b'0')
+                    stream.flush()
+                stream.seek(0)
+                try:
+                    msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
+                except OSError:
+                    raise ValueError('This module is already being updated, or its lock is unavailable') from None
+                try:
+                    yield
+                finally:
+                    stream.seek(0)
+                    msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
+                return
+            import fcntl
             try:
                 fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except BlockingIOError:
@@ -145,8 +169,11 @@ class Store:
         if not snapshot.get('revision'):
             return
         root = Path(module['root'])
-        if root.is_symlink() or json.loads((root / '.now-module.json').read_text()).get('id') != module_id:
+        if platform.is_link(root) or json.loads((root / '.now-module.json').read_text()).get('id') != module_id:
             raise ValueError('Module folder ownership changed')
+        if platform.WINDOWS:
+            # UI opens the committed revision directly: no admin/Developer Mode symlinks.
+            return
         for name in ('Current Files', 'Packs', 'Latest Update', 'Reports'):
             link = root / name
             if link.exists() and not link.is_symlink():
@@ -155,3 +182,14 @@ class Store:
             tmp = root / f'.link-{uuid4().hex}'
             tmp.symlink_to(target.relative_to(root), target_is_directory=True)
             os.replace(tmp, link)
+
+    def folder_path(self, module_id: str, name: str) -> Path:
+        if name not in ('Current Files', 'Packs', 'Latest Update', 'Reports'):
+            raise ValueError('Unknown module folder')
+        module = self.module(module_id)
+        if platform.WINDOWS:
+            snapshot = self.snapshot(module_id)
+            if not snapshot.get('revision_path'):
+                raise ValueError('Save an update first')
+            return Path(snapshot['revision_path']) / name
+        return Path(module['root']) / name

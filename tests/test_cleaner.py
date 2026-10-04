@@ -21,7 +21,7 @@ class CleanerTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         self.source = self.root / "source"
         self.source.mkdir()
-        self.env = {**os.environ, "HOME": str(self.root), "OPENAI_API_KEY": ""}
+        self.env = {**os.environ, "HOME": str(self.root), "USERPROFILE": str(self.root), "OPENAI_API_KEY": ""}
 
     def add_zip(self, name, files):
         with zipfile.ZipFile(self.source / name, "w") as archive:
@@ -191,7 +191,7 @@ class PrivacyAndReplacementTests(unittest.TestCase):
         args = [str(SCRIPT), '--source', str(self.source), '--overwrite']
         with mock.patch.object(sys, 'argv', args), mock.patch.object(cleaner, 'load_api_key', return_value=''), \
              mock.patch.object(cleaner, 'run_pipeline', side_effect=replace_output), \
-             mock.patch.dict(os.environ, {'HOME': str(self.root)}):
+             mock.patch.dict(os.environ, {'HOME': str(self.root), 'USERPROFILE': str(self.root)}):
             self.assertEqual(cleaner.main(), 1)
         self.assertEqual((output / 'precious.txt').read_text(), 'must survive')
         self.assertTrue((retained / 'SUMMARY' / 'SUMMARY.html').is_file())

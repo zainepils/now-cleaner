@@ -220,7 +220,8 @@ def apply(store: Store, token: str, log=print) -> dict:
         if module != result['module_config'] or store.snapshot(module['id'])['revision'] != result['base']:
             raise ValueError('Module or settings changed; prepare the import again')
         root = Path(module['root'])
-        if root.is_symlink() or json.loads((root / '.now-module.json').read_text()).get('id') != module['id']:
+        from .platform_support import is_link
+        if is_link(root) or json.loads((root / '.now-module.json').read_text()).get('id') != module['id']:
             raise ValueError('Module destination ownership changed')
         final = root / 'revisions' / result['revision']
         stage = directory / 'prepared'

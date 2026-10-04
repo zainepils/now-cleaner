@@ -10,6 +10,7 @@ from now_cleaner import drive, engine
 from now_cleaner.store import Store
 from now_cleaner.safety import digest
 import zipfile
+import sys
 
 
 class Request:
@@ -188,6 +189,7 @@ class DriveTests(unittest.TestCase):
         with self.assertRaises(drive.DriveConflict):
             self.upload()
 
+    @unittest.skipIf(sys.platform == 'win32', 'Drive module workflow is disabled in Windows preview')
     def test_unverified_format_is_gated_and_confirmation_requires_updated_probe(self):
         module = self.store.save_module('Marketing', self.root / 'output', mode='drive')
         archive = self.root / 'sample.zip'
@@ -204,6 +206,7 @@ class DriveTests(unittest.TestCase):
         result = drive.sync(self.store, module['id'], self.client, lambda _: None)
         self.assertEqual(len(result), 2)
 
+    @unittest.skipIf(sys.platform == 'win32', 'Drive module workflow is disabled in Windows preview')
     def test_partial_failure_preserves_successful_receipts_and_retry(self):
         module = self.store.save_module('Marketing', self.root / 'output', mode='drive')
         archive = self.root / 'sample.zip'

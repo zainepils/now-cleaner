@@ -33,6 +33,11 @@ this version to remove those remote assets. Existing output folders are not rewr
 
 ## What Stays Locally?
 
+In the local-only Windows preview, module inventory/previews use
+`%LOCALAPPDATA%\NOW Cleaner` instead of macOS Application Support. Google Drive is
+disabled; no Google tokens are stored by that preview. Local Windows files use existing
+user-folder permissions, not POSIX permission settings or custom app-configured ACLs.
+
 - `~/Library/Application Support/NOW Cleaner/inventory.sqlite3`: module names,
   destination paths, NotebookLM links, hashes, original filenames, pack membership,
   revision history, preferences, Drive IDs/upload receipts, connected account email
@@ -92,3 +97,4 @@ You can build from source, inspect changes and test local-only operation offline
 App bundles are currently ad-hoc signed, not Apple-notarized. Public source availability
 does not prove that an arbitrary downloaded binary matches it. Check the release source
 commit and checksum when provided; checksums identify bytes, not safety.
+Windows installers are currently unsigned. See [Windows preview guidance](windows.md).

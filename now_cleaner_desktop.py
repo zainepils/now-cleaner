@@ -12,6 +12,8 @@ from datetime import datetime
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 import clean_now_notebooklm as processor
+from now_cleaner.platform_support import open_path
+from now_cleaner import platform_support as platform
 
 DEFAULT_SOURCE = Path.home() / 'Downloads' / 'NOW'
 
@@ -62,33 +64,33 @@ class CleanerApp:
         self.style.configure('Card.TFrame', background='#ffffff', relief='flat')
         self.style.configure('Header.TFrame', background='#ffffff')
 
-        self.style.configure('Title.TLabel', font=('Avenir Next', 24, 'bold'), foreground='#12263a', background='#ffffff')
-        self.style.configure('Subtitle.TLabel', font=('Avenir Next', 11), foreground='#4f6070', background='#ffffff')
+        self.style.configure('Title.TLabel', font=(platform.FONT_FAMILY, 24, 'bold'), foreground='#12263a', background='#ffffff')
+        self.style.configure('Subtitle.TLabel', font=(platform.FONT_FAMILY, 11), foreground='#4f6070', background='#ffffff')
 
-        self.style.configure('SectionTitle.TLabel', font=('Avenir Next', 11, 'bold'), foreground='#193549', background='#ffffff')
-        self.style.configure('Body.TLabel', font=('Avenir Next', 10), foreground='#3d5163', background='#ffffff')
+        self.style.configure('SectionTitle.TLabel', font=(platform.FONT_FAMILY, 11, 'bold'), foreground='#193549', background='#ffffff')
+        self.style.configure('Body.TLabel', font=(platform.FONT_FAMILY, 10), foreground='#3d5163', background='#ffffff')
 
-        self.style.configure('Primary.TButton', font=('Avenir Next', 11, 'bold'))
+        self.style.configure('Primary.TButton', font=(platform.FONT_FAMILY, 11, 'bold'))
         self.style.map(
             'Primary.TButton',
             foreground=[('disabled', '#94a1ad'), ('!disabled', '#ffffff')],
             background=[('disabled', '#8dbac8'), ('active', '#0f7894'), ('!disabled', '#0f8fb0')],
         )
 
-        self.style.configure('Secondary.TButton', font=('Avenir Next', 10))
+        self.style.configure('Secondary.TButton', font=(platform.FONT_FAMILY, 10))
 
         self.style.configure('TLabelframe', background='#ffffff', bordercolor='#d7e0e8', relief='solid')
-        self.style.configure('TLabelframe.Label', font=('Avenir Next', 11, 'bold'), foreground='#1c3f58', background='#ffffff')
+        self.style.configure('TLabelframe.Label', font=(platform.FONT_FAMILY, 11, 'bold'), foreground='#1c3f58', background='#ffffff')
 
-        self.style.configure('TCheckbutton', background='#ffffff', foreground='#334b5f', font=('Avenir Next', 10))
+        self.style.configure('TCheckbutton', background='#ffffff', foreground='#334b5f', font=(platform.FONT_FAMILY, 10))
         self.style.configure('TEntry', fieldbackground='#f9fbfd')
-        self.style.configure('TCombobox', padding=8, font=('Avenir Next', 12), fieldbackground='#f3f7f5')
+        self.style.configure('TCombobox', padding=8, font=(platform.FONT_FAMILY, 12), fieldbackground='#f3f7f5')
         self.style.configure('TNotebook', background='#eef3f8', borderwidth=0)
-        self.style.configure('TNotebook.Tab', font=('Avenir Next', 12), padding=(18, 10), background='#e4ece9')
+        self.style.configure('TNotebook.Tab', font=(platform.FONT_FAMILY, 12), padding=(18, 10), background='#e4ece9')
         self.style.map('TNotebook.Tab', background=[('selected', '#ffffff')], foreground=[('selected', '#193f37')])
-        self.style.configure('Treeview', font=('Avenir Next', 11), rowheight=34, background='#ffffff', fieldbackground='#ffffff', borderwidth=0)
-        self.style.configure('Treeview.Heading', font=('Avenir Next', 11, 'bold'), padding=10, background='#edf3f2', relief='flat')
-        self.style.configure('Body.TLabel', font=('Avenir Next', 11), foreground='#526b63')
+        self.style.configure('Treeview', font=(platform.FONT_FAMILY, 11), rowheight=34, background='#ffffff', fieldbackground='#ffffff', borderwidth=0)
+        self.style.configure('Treeview.Heading', font=(platform.FONT_FAMILY, 11, 'bold'), padding=10, background='#edf3f2', relief='flat')
+        self.style.configure('Body.TLabel', font=(platform.FONT_FAMILY, 11), foreground='#526b63')
 
     def _build_ui(self) -> None:
         root_wrap = ttk.Frame(self.root, style='Root.TFrame', padding=16)
@@ -368,6 +370,7 @@ class CleanerApp:
                 text=True,
                 bufsize=1,
                 env={**os.environ, 'PYTHONUNBUFFERED': '1'},
+                creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0,
             )
 
             assert self.proc.stdout is not None
@@ -436,13 +439,13 @@ class CleanerApp:
 
     def open_output(self) -> None:
         if self.current_output_dir and self.current_output_dir.exists():
-            subprocess.run(['open', str(self.current_output_dir)], check=False)
+            open_path(self.current_output_dir)
         else:
             messagebox.showinfo('Not found', 'Output folder not found yet.')
 
     def open_summary(self) -> None:
         if self.current_summary_path and self.current_summary_path.exists():
-            subprocess.run(['open', str(self.current_summary_path)], check=False)
+            open_path(self.current_summary_path)
         else:
             messagebox.showinfo('Not found', 'Summary file not found yet.')
 

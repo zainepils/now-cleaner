@@ -6,6 +6,7 @@ import stat
 import unicodedata
 import zipfile
 from pathlib import Path, PurePosixPath
+from . import platform_support as platform
 
 MAX_MEMBERS = 5000
 MAX_EXPANDED_BYTES = 1_000_000_000
@@ -29,6 +30,9 @@ def normal_path(name: str) -> str:
         raise ValueError('Archive contains an unsafe path')
     if not parts or re.match(r'^[A-Za-z]:', parts[0]):
         raise ValueError('Archive contains an unsafe path')
+    if platform.WINDOWS and any(p and (re.search(r'[<>:"|?*]', p) or p.endswith((' ', '.')) or
+                                      re.match(r'^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\.|$)', p, re.I)) for p in parts):
+        raise ValueError('Archive contains a filename Windows cannot safely extract')
     return str(PurePosixPath(name))
 
 

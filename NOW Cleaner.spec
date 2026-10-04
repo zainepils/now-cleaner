@@ -3,6 +3,15 @@ from PyInstaller.utils.hooks import collect_data_files
 from importlib.metadata import distributions
 from pathlib import Path
 import sys
+import os
+
+windows = sys.platform == 'win32'
+icon = 'assets/now-cleaner.icns'
+if windows:
+    from PIL import Image
+    Path('build').mkdir(exist_ok=True)
+    icon = 'build/now-cleaner.ico'
+    Image.open('assets/now-cleaner.png').save(icon, sizes=[(16, 16), (32, 32), (48, 48), (256, 256)])
 
 datas = [('docs/drive-setup.md', 'docs'), ('docs/privacy.md', 'docs'),
          ('docs/install.md', 'docs'), ('LICENSE', '.'), ('NOTICE', '.')]
@@ -30,7 +39,7 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=datas,
-    hiddenimports=['keyring.backends.macOS'],
+    hiddenimports=[] if windows else ['keyring.backends.macOS'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -50,7 +59,8 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    console=False,
+    console=bool(os.environ.get('NOW_CLEANER_CONSOLE_TEST')),
+    icon=icon if windows else None,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
@@ -66,7 +76,8 @@ coll = COLLECT(
     upx_exclude=[],
     name='NOW Cleaner',
 )
-app = BUNDLE(
+if not windows:
+ app = BUNDLE(
     coll,
     name='NOW Cleaner.app',
     icon='assets/now-cleaner.icns',
