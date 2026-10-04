@@ -88,7 +88,9 @@ Google's [supported sources](https://support.google.com/gemininotebook/answer/16
 
 ## Run from source
 
-The desktop app requires macOS and Python 3.12+ with Tkinter. Install module/Drive dependencies:
+Running from source requires Python 3.12+ with Tkinter. macOS supports the existing
+local/Drive workflow; Windows currently supports the local-only preview. Downloaded
+apps already bundle Python. For source development, install these dependencies:
 
 ```sh
 python3 -m venv .venv
