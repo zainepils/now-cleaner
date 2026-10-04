@@ -27,11 +27,18 @@ for dist in distributions():
             if source.is_file():
                 datas.append((str(source), 'third-party/' + str(entry.parent)))
 python_notice = Path(sys.base_prefix) / 'Resources/English.lproj/Documentation/_sources/license.rst.txt'
+if windows:
+    python_notice = Path(sys.base_prefix) / 'LICENSE.txt'
 if python_notice.is_file():
     datas.append((str(python_notice), 'third-party/python'))
 tk_notice = Path(sys.base_prefix) / 'lib/tk8.6/demos/license.terms'
 if tk_notice.is_file():
     datas.append((str(tk_notice), 'third-party/tk'))
+if windows:
+    for library in ('tcl8.6', 'tk8.6'):
+        notice = Path(sys.base_prefix) / 'tcl' / library / 'license.terms'
+        if notice.is_file():
+            datas.append((str(notice), 'third-party/' + library))
 
 
 a = Analysis(

@@ -14,6 +14,11 @@ first-launch approval. Read the [short installation guide](docs/install.md).
 Local files work without Google setup. Office visual packs need LibreOffice installed
 separately; optional Drive connection still needs personal OAuth setup.
 
+**[Try the Windows preview](https://github.com/zainepils/now-cleaner/releases/tag/v0.2.0-windows-preview)**
+for Windows 10/11 x64 PCs. This unsigned, local-only preview includes Python and a normal
+installer. Google Drive is unavailable on Windows for now. Please complete the
+[short PC check](docs/windows.md) before sharing it with peers.
+
 The repository's code and documentation are available under the [PolyForm Noncommercial License 1.0.0](LICENSE). You may use, modify, and share them for permitted noncommercial purposes, provided you pass on the license terms and [required notice](NOTICE). Commercial use requires separate permission from the owner. This is source-available software, not an open-source license. The license does not grant rights to any course content or other files a user processes with the tool.
 
 ## Privacy at a glance
