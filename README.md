@@ -6,12 +6,14 @@ The repository's code and documentation are available under the [PolyForm Noncom
 
 ## Modules & updates
 
-1. Create a module with a required name and saved destination. Default: one NotebookLM notebook per module, 50 source slots, 15 reserved for independently added sources.
-2. Select one or more ZIPs, or a folder containing ZIPs.
-3. Preview new, changed, unchanged, conflicting and possible-renamed files. Review uncertain pack categories. Partial imports keep missing earlier files; full snapshots only remove files you explicitly approve.
-4. Prepare stable lecture/seminar packs grouped into four-week ranges, plus assessment/reference packs. Review affected packs, warnings and estimated source count.
-5. Apply the local update. Previous revisions remain recoverable through History.
-6. Use local uploads, or Sync / Retry Drive after completing [Drive setup and the synthetic sync test](docs/drive-setup.md).
+1. Create a module by giving it a name. Folder, NotebookLM link and source-limit settings are optional. Defaults: local files, one NotebookLM notebook per module, 50 source slots, 15 reserved for independently added sources.
+2. Choose a NOW ZIP. Multiple ZIPs can be selected together; folder import is also available under **More**.
+3. Check what changed. Unchanged files are hidden by default and files needing decisions are highlighted. Choose **Review selected files** for conflicts or uncertain groups. Partial imports keep missing earlier files; full snapshots only remove files you explicitly approve.
+4. Choose **Prepare upload files**. Stable lecture/seminar packs use four-week ranges, plus assessment/reference packs. Review warnings and the estimated source count.
+5. Choose **Save this update**. Previous revisions remain recoverable through **More > Update history**.
+6. Choose **Open files to upload** for local uploads, or **Send to Google Drive** after completing [Drive setup and the synthetic sync test](docs/drive-setup.md). Neither action verifies that NotebookLM has updated.
+
+The app shows one primary next action, with progress feedback while working. Optional settings, folder imports, history and a plain-language guide are under **More**. Switching modules clears the selected download and resets full-snapshot mode to prevent accidental imports into another module.
 
 Contents are compared using SHA-256 and original course paths, not ZIP dates or changing archive names. Identical duplicate exports are deduplicated. Conflicting paths across ZIPs require a version choice. Saved filenames and pack membership remain stable between updates.
 
