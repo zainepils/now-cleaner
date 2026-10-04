@@ -93,11 +93,69 @@ class ModuleTests(unittest.TestCase):
         self.assertNotIn('lecture/a.txt', result['files'])
         self.assertEqual(first['files']['lecture/a.txt']['pack'], result['files']['lecture/b.txt']['pack'])
 
-    def test_reference_category_must_be_reviewed(self):
+    def test_reference_category_is_automatic_and_keeps_saved_category(self):
         self.export({'reading.txt': 'text'})
         review = engine.preview(self.store, self.module['id'], [self.zip], log=lambda _: None)
-        with self.assertRaisesRegex(ValueError, 'Choose a pack category'):
-            engine.prepare(self.store, review['token'])
+        result = engine.prepare(self.store, review['token'], log=lambda _: None)
+        self.assertEqual(result['files']['reading.txt']['group'], 'Reference')
+        engine.apply(self.store, result['token'], log=lambda _: None)
+        custom = self.import_files({'reading.txt': 'edited'}, decisions={'reading.txt': {'group': 'Extra reading'}})
+        self.export({'reading.txt': 'edited again'})
+        review = engine.preview(self.store, self.module['id'], [self.zip], log=lambda _: None)
+        result = engine.prepare(self.store, review['token'], log=lambda _: None)
+        self.assertEqual(result['files']['reading.txt']['group'], 'Extra reading')
+        self.assertEqual(custom['files']['reading.txt']['pack'], result['files']['reading.txt']['pack'])
+
+    def test_delete_module_trashes_only_owned_outputs_and_pending_imports(self):
+        import shutil
+        self.import_files({'Lecture/a.txt': 'original'})
+        other = self.store.save_module('Other module', self.root / 'modules')
+        self.store.set_setting('example_preferences', 'fictional local setting')
+        self.store.set_remote(self.module['id'], 'pack', {'id': 'fictional-drive-id'})
+        review = engine.preview(self.store, self.module['id'], [self.zip], log=lambda _: None)
+        preview_folder = self.store.state / 'previews' / review['token']
+        def trash(paths):
+            for path in paths:
+                shutil.rmtree(path)
+        with mock.patch('now_cleaner.store.send2trash', side_effect=trash) as moved:
+            self.store.delete_module(self.module['id'])
+        self.assertIn(str(Path(self.module['root'])), moved.call_args.args[0])
+        self.assertIn(str(preview_folder), moved.call_args.args[0])
+        self.assertTrue(self.zip.exists())
+        self.assertTrue(Path(other['root']).exists())
+        self.assertEqual([m['id'] for m in self.store.modules()], [other['id']])
+        self.assertEqual(self.store.history(self.module['id']), [])
+        self.assertEqual(self.store.remotes(self.module['id']), {})
+        self.assertEqual(self.store.setting('example_preferences'), 'fictional local setting')
+
+    def test_delete_refuses_unowned_folder_and_keeps_module(self):
+        (Path(self.module['root']) / '.now-module.json').write_text('{"id":"someone-else"}')
+        with mock.patch('now_cleaner.store.send2trash') as trash, self.assertRaisesRegex(ValueError, 'ownership changed'):
+            self.store.delete_module(self.module['id'])
+        trash.assert_not_called()
+        self.assertEqual(len(self.store.modules()), 1)
+
+    def test_trash_failure_keeps_tracking_and_never_permanently_deletes(self):
+        self.import_files({'Lecture/a.txt': 'original'})
+        with mock.patch('now_cleaner.store.send2trash', side_effect=OSError), self.assertRaisesRegex(ValueError, 'Deletion could not finish'):
+            self.store.delete_module(self.module['id'])
+        self.assertTrue(Path(self.module['root']).exists())
+        self.assertEqual(len(self.store.modules()), 1)
+        self.assertEqual(len(self.store.history(self.module['id'])), 1)
+
+    def test_delete_and_rename_refuse_concurrent_update(self):
+        with self.store.lock(self.module['id']):
+            for operation in [lambda: self.store.delete_module(self.module['id']),
+                              lambda: self.store.rename_module(self.module['id'], 'New name')]:
+                with self.assertRaisesRegex(ValueError, 'already being updated'):
+                    operation()
+
+    def test_rename_preserves_id_settings_and_files(self):
+        first = self.import_files({'Lecture/a.txt': 'original'})
+        renamed = self.store.rename_module(self.module['id'], 'New name')
+        self.assertEqual(renamed['id'], self.module['id'])
+        self.assertEqual(renamed['root'], self.module['root'])
+        self.assertEqual(self.store.snapshot(renamed['id']), first)
 
     def test_stale_preview_and_invalid_tokens_are_rejected(self):
         self.export({'Lecture/a.txt': 'a'})

@@ -35,7 +35,7 @@ def classify(path: str) -> tuple[str, bool]:
         start = ((int(week[1]) - 1) // 4) * 4 + 1
         if start > 0:
             return f'{category} - Weeks {start:02d}-{start + 3:02d}', False
-    return category, category == 'Reference'
+    return category, False
 
 
 def text_pdf(text: str, target: Path, title: str) -> None:

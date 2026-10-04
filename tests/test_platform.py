@@ -10,19 +10,9 @@ from now_cleaner.store import Store, default_state
 
 
 class PlatformTests(unittest.TestCase):
-    def test_notebook_url_prefers_chrome_on_mac(self):
-        with mock.patch.object(platform.sys, 'platform', 'darwin'), \
-             mock.patch.object(platform.subprocess, 'run') as launch, \
-             mock.patch.object(platform.webbrowser, 'open') as default:
-            platform.open_url('https://notebooklm.google.com/', prefer_chrome=True)
-            self.assertEqual(launch.call_args.args[0], ['open', '-a', 'Google Chrome', 'https://notebooklm.google.com/'])
-            default.assert_not_called()
-
-    def test_missing_chrome_falls_back_to_default_browser(self):
-        with mock.patch.object(platform.sys, 'platform', 'darwin'), \
-             mock.patch.object(platform.subprocess, 'run', side_effect=OSError), \
-             mock.patch.object(platform.webbrowser, 'open') as default:
-            platform.open_url('https://notebooklm.google.com/', prefer_chrome=True)
+    def test_notebook_url_uses_default_browser(self):
+        with mock.patch.object(platform.webbrowser, 'open') as default:
+            platform.open_url('https://notebooklm.google.com/')
             default.assert_called_once_with('https://notebooklm.google.com/')
 
     def test_windows_state_uses_local_appdata(self):

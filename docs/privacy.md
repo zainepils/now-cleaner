@@ -61,6 +61,13 @@ copy folders independently of the app. Choose a non-synced destination if that m
 
 ## Google Permission and Disconnect
 
+**Delete module** removes that module's local inventory, history and saved Drive file-ID receipts.
+Its entire output folder and pending-import caches move to Trash/Recycle Bin; emptying the bin
+is a separate user action. Original download ZIPs, existing backups, shared app settings,
+Google credentials and online Drive/NotebookLM content remain. Restoring trashed files does
+not restore the deleted module's inventory history. Deletion never falls back to permanent
+file removal when the operating system cannot move files to the bin.
+
 The app requests `drive.file`, rather than access to the entire Drive. This applies to
 files the app creates or files explicitly made available to it. The desktop OAuth flow
 uses PKCE and a temporary loopback listener at `127.0.0.1`, only during sign-in.

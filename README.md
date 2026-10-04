@@ -4,7 +4,7 @@ A local macOS desktop app for organising NTU NOW course ZIP exports and preparin
 
 ## Download for Mac
 
-**[Download NOW Cleaner for Apple silicon](https://github.com/zainepils/now-cleaner/releases/download/v0.1.0/NOW-Cleaner-Apple-Silicon.dmg)**
+**[Download NOW Cleaner for Apple silicon](https://github.com/zainepils/now-cleaner/releases/download/v0.3.0/NOW-Cleaner-Apple-Silicon.dmg)**
 
 Open the installer, drag NOW Cleaner into Applications, then open it from there.
 Python is included; no coding setup is needed. This build is for M-series Macs, not Intel
@@ -14,7 +14,7 @@ first-launch approval. Read the [short installation guide](docs/install.md).
 Local files work without Google setup. Office visual packs need LibreOffice installed
 separately; optional Drive connection still needs personal OAuth setup.
 
-**[Try the Windows preview](https://github.com/zainepils/now-cleaner/releases/tag/v0.2.0-windows-preview)**
+**[Download the Windows preview](https://github.com/zainepils/now-cleaner/releases/download/v0.3.0/NOW-Cleaner-Windows-Setup.exe)**
 for Windows 10/11 x64 PCs. This unsigned, local-only preview includes Python and a normal
 installer. Google Drive is unavailable on Windows for now. Please complete the
 [short PC check](docs/windows.md) before sharing it with peers.
@@ -38,14 +38,16 @@ provide evidence you can inspect; they do not prove the app is free of vulnerabi
 
 1. Create a module by giving it a name. Folder, NotebookLM link and source-limit settings are optional. Defaults: local files, one NotebookLM notebook per module, 50 source slots, 15 reserved for independently added sources.
 2. Choose **Add download**, then **ZIP files** or **Folder of ZIPs**. Multiple ZIPs can be selected together. First-time guidance explains both options and that you do not need to unzip files yourself.
-3. Check what changed. Yellow rows explain category or version decisions; the main button opens the next decision directly. Unchanged imports show that there is nothing to upload. Partial imports keep missing earlier files; full snapshots only remove files you explicitly approve.
+3. Check what changed. Categories are automatic; general material goes into Reference, and saved category choices are reused. Category changes are optional. Yellow rows are reserved for conflicting versions, duplicates or uncertain renames. Unchanged imports show that there is nothing to upload. Partial imports keep missing earlier files; full snapshots only remove files you explicitly approve.
 4. Choose **Prepare NotebookLM files**. Review the upload preview: it lists files to add, replace or remove. The displayed file count excludes reserved spaces and is not a live NotebookLM source count. Stable lecture/seminar packs use four-week ranges, plus assessment/reference packs.
 5. Choose **Save this update**. Previous revisions remain recoverable through **More > Update history**.
-6. For the first upload, click **Ready for NotebookLM** and upload the files inside that folder, not the folder itself. For later updates, **Open latest upload files** shows only new or changed files. Remove old versions of replacement sources from NotebookLM before uploading their replacements; leave unchanged sources alone. The replacement checklist is under **More > Open update instructions**. Organised originals are kept separately and may include formats unsuitable for direct upload, such as HTML.
+6. For the first upload, click **Open NotebookLM-ready files** and upload the files inside that folder, not the folder itself. When you get new downloads, choose the same module and click **Add more files**. After saving an update, **Open latest upload files** shows only new or changed files. Remove old versions of replacement sources from NotebookLM before uploading their replacements; leave unchanged sources alone. The replacement checklist is under **More > Open update instructions**. Organised originals are kept separately and may include formats unsuitable for direct upload, such as HTML.
 
-**Open NotebookLM** uses Chrome on macOS, falling back to your default browser if Chrome is unavailable. Optional **Send to Google Drive** requires [Drive setup and the synthetic sync test](docs/drive-setup.md). Local saves and Drive uploads do not verify that NotebookLM has updated.
+**Open NotebookLM** uses your default browser and opens the notebook link you entered for that module, or the NotebookLM homepage if no link is saved. No personal notebook link or forced browser preference is included. Optional **Send to Google Drive** requires [Drive setup and the synthetic sync test](docs/drive-setup.md). Local saves and Drive uploads do not verify that NotebookLM has updated.
 
 The app shows one primary next action, with progress feedback while working. Optional settings, folder imports, history and a plain-language guide are under **More**. Switching modules clears the selected download and resets full-snapshot mode to prevent accidental imports into another module.
+
+**More > Rename module** changes the display name without changing existing filenames or upload identities. **More > Delete module...** requires typing `DELETE`: it removes local tracking history and moves the entire module output folder and pending imports to Trash/Recycle Bin. Original download ZIPs, existing backups and online Drive/NotebookLM files are not deleted. Restoring files from Trash does not restore the module's tracking history.
 
 Contents are compared using SHA-256 and original course paths, not ZIP dates or changing archive names. Identical duplicate exports are deduplicated. Conflicting paths across ZIPs require a version choice. Saved filenames and pack membership remain stable between updates.
 

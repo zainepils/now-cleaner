@@ -156,13 +156,20 @@ class GuidedUITests(unittest.TestCase):
             self.panel.render()
             self.root.update()
             self.assertTrue(self.panel.secondary_btn.winfo_ismapped())
-            self.assertEqual(self.panel.secondary_btn.cget('text'), 'Ready for NotebookLM')
+            self.assertEqual(self.panel.secondary_btn.cget('text'), 'Open NotebookLM-ready files')
+            self.assertEqual(self.panel.primary_btn.cget('text'), 'Add more files')
             with mock.patch.object(self.panel, 'open_folder') as open_folder:
                 self.panel.secondary_btn.invoke()
                 open_folder.assert_called_once_with('Packs')
             self.panel.phase = 'complete'
             self.panel.render()
+            self.root.update()
             self.assertEqual(self.panel.primary_btn.cget('text'), 'Open latest upload files')
+            self.assertEqual(self.panel.import_btn.cget('text'), 'Add more files')
+            self.assertTrue(self.panel.import_btn.winfo_ismapped())
+            with mock.patch.object(self.panel, 'choose_download') as choose:
+                self.panel.import_btn.invoke()
+                choose.assert_called_once()
             self.assertIn('not the folder', self.panel.empty_detail.cget('text'))
             with mock.patch.object(self.panel, 'open_folder') as open_folder:
                 self.panel.next_step()
@@ -170,6 +177,18 @@ class GuidedUITests(unittest.TestCase):
             self.panel.busy = True
             self.panel.render()
             self.assertEqual(str(self.panel.secondary_btn.cget('state')), 'disabled')
+
+    def test_saved_module_buttons_fit_minimum_window(self):
+        self.add_module()
+        self.root.geometry('980x720')
+        with mock.patch.object(self.store, 'snapshot', return_value={'revision': 'saved'}):
+            self.panel.phase = 'complete'
+            self.panel.render()
+            self.root.update()
+            right = self.root.winfo_rootx() + self.root.winfo_width()
+            for button in self.panel.buttons:
+                if button.winfo_ismapped():
+                    self.assertLessEqual(button.winfo_rootx() + button.winfo_width(), right)
 
     def test_unchanged_import_does_not_require_preparing_or_saving(self):
         self.add_module()
@@ -181,13 +200,57 @@ class GuidedUITests(unittest.TestCase):
             choose.assert_called_once()
             prepare.assert_not_called()
 
-    def test_category_decision_is_explained_in_row_and_primary_button(self):
+    def test_reference_does_not_require_manual_category_confirmation(self):
         self.add_module()
         change = dict(key='glossary', path='Glossary.pdf', status='new',
                       candidates=[dict(group='Reference', review=True)])
         self.panel.show_review(dict(changes=[change], counts={'new': 1}))
-        self.assertEqual(self.panel.primary_btn.cget('text'), 'Choose category')
-        self.assertEqual(self.panel.tree.set('0', 'pack'), 'Confirm category: Reference')
+        self.assertEqual(self.panel.primary_btn.cget('text'), 'Prepare NotebookLM files')
+        self.assertEqual(self.panel.tree.set('0', 'pack'), 'Reference')
+        self.assertFalse(self.panel.needs_decision(change))
+        self.assertNotIn('attention', self.panel.tree.item('0', 'tags'))
+
+    def test_delete_requires_typed_confirmation_and_cancel_does_nothing(self):
+        from tkinter import ttk
+        self.add_module()
+        self.panel.delete_module()
+        self.root.update()
+        dialog = next(w for w in self.root.winfo_children() if isinstance(w, tk.Toplevel))
+        pane = dialog.winfo_children()[0]
+        entry = next(w for w in pane.winfo_children() if isinstance(w, ttk.Entry))
+        row = pane.winfo_children()[-1]
+        buttons = [w for w in row.winfo_children() if isinstance(w, ttk.Button)]
+        delete = next(w for w in buttons if w.cget('text') == 'Delete module and local contents')
+        self.assertEqual(str(delete.cget('state')), 'disabled')
+        entry.insert(0, 'DELETE')
+        self.root.update()
+        self.assertEqual(str(delete.cget('state')), 'normal')
+        with mock.patch.object(self.store, 'delete_module') as remove:
+            next(w for w in buttons if w.cget('text') == 'Cancel').invoke()
+            remove.assert_not_called()
+        self.assertEqual(len(self.store.modules()), 1)
+
+    def test_rename_dialog_saves_name_without_new_identity(self):
+        module = self.add_module()
+        with mock.patch('now_cleaner.module_ui.simpledialog.askstring', return_value='Renamed module'):
+            self.panel.rename_module()
+        self.assertEqual(self.store.module(module['id'])['name'], 'Renamed module')
+        self.assertEqual(len(self.store.modules()), 1)
+
+    def test_notebook_without_user_link_opens_homepage(self):
+        self.add_module()
+        with mock.patch('now_cleaner.module_ui.platform.open_url') as opener:
+            self.panel.open_notebook()
+            opener.assert_called_once_with('https://notebooklm.google.com/')
+
+    def test_notebook_opens_only_the_link_user_saved_in_module(self):
+        module = self.add_module()
+        link = 'https://notebook.google.com/notebook/fictional-example'
+        self.store.save_module(module['name'], Path(module['root']).parent, notebook=link, module_id=module['id'])
+        self.panel.refresh(module['id'])
+        with mock.patch('now_cleaner.module_ui.platform.open_url') as opener:
+            self.panel.open_notebook()
+            opener.assert_called_once_with(link)
 
     def test_prepared_upload_list_counts_real_files_not_reserved_spaces(self):
         self.add_module()

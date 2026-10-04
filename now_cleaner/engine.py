@@ -153,9 +153,9 @@ def prepare(store: Store, token: str, decisions: dict | None = None, log=print) 
             item = dict(candidates[selected])
             if len(candidates) > 1:
                 item['rejected_hashes'] = [c['hash'] for index, c in enumerate(candidates) if index != selected]
-            if item['review'] and not decision.get('group'):
-                raise ValueError(f'Choose a pack category for: {item["path"]}')
             item['group'] = str(decision.get('group') or item['group']).strip()
+            if key in old['files'] and not decision.get('group'):
+                item['group'] = old['files'][key]['group']
             if not item['group'] or len(item['group']) > 100 or '|' in item['group']:
                 raise ValueError('Pack category must be 1-100 characters without |')
             if decision.get('rename') == 'move':

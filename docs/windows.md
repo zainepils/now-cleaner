@@ -16,7 +16,8 @@ policies may prevent running it. There is no automatic updater.
 
 Start with fictional files before importing private course content. Create a module,
 choose a ZIP or a folder containing ZIPs, review changes and save the update. Use
-**Open course files** and **Open files to upload** to find the committed version.
+**Open NotebookLM-ready files** for the first upload and **Open latest upload files**
+for later updates. Choose **Add more files** when new course downloads arrive.
 Windows does not need symlinks, Developer Mode or administrator privileges for these actions.
 The folders live inside saved revision directories rather than top-level Mac folder links.
 

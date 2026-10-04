@@ -30,7 +30,7 @@ Google's [source guidance](https://support.google.com/gemininotebook/answer/1621
 
 ## Daily use
 
-Create a module in Drive mode, set its notebook link, and import exports. Preview changes, resolve uncertain categories/conflicts, prepare packs, and apply the local update. Click **Sync / Retry Drive**. Add new packs from Drive to NotebookLM once. Later updates modify those same files.
+Create a module in Drive mode, set its notebook link, and import exports. Preview changes, resolve conflicts or uncertain renames if needed, prepare files, and save the local update. Categories are automatic and can be changed optionally. Click **Send to Google Drive**. Add new packs from Drive to NotebookLM once. Later updates modify those same files.
 
 Do not edit managed packs in Drive. External modifications, missing files or account mismatches block overwriting; restore the expected file or use local export while investigating. A failed upload does not invalidate successful receipts or remove local data. Retry operates on outstanding packs.
 

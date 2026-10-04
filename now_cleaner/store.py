@@ -4,6 +4,7 @@ import contextlib
 import json
 import os
 import sqlite3
+from send2trash import send2trash
 from pathlib import Path
 from uuid import uuid4
 from urllib.parse import urlparse
@@ -98,6 +99,51 @@ class Store:
         with self.connect() as conn:
             row = conn.execute('SELECT snapshot FROM revisions WHERE id=(SELECT revision FROM modules WHERE id=?)', (module_id,)).fetchone()
         return json.loads(row[0]) if row else {'files': {}, 'packs': {}, 'revision': None}
+
+    def rename_module(self, module_id: str, name: str) -> dict:
+        with self.lock(module_id):
+            module = self.module(module_id)
+            return self.save_module(name, Path(module['root']).parent, module['notebook'], module['mode'],
+                                    module['limit'], module['reserved'], module_id)
+
+    def delete_module(self, module_id: str) -> None:
+        with self.lock(module_id):
+            module = self.module(module_id)
+            root = Path(module['root'])
+            targets = []
+            if platform.is_link(root) or root.resolve() != root.absolute():
+                raise ValueError('Module folder ownership changed; nothing was deleted')
+            if root.exists():
+                marker = root / '.now-module.json'
+                if not marker.is_file() or platform.is_link(marker):
+                    raise ValueError('Module folder ownership changed; nothing was deleted')
+                if json.loads(marker.read_text()).get('id') != module_id:
+                    raise ValueError('Module folder ownership changed; nothing was deleted')
+                targets.append(str(root))
+            previews = self.state / 'previews'
+            if platform.is_link(previews):
+                raise ValueError('Pending-import folder ownership changed; nothing was deleted')
+            if previews.is_dir():
+                for folder in previews.iterdir():
+                    if len(folder.name) != 32 or any(c not in '0123456789abcdef' for c in folder.name):
+                        continue
+                    if platform.is_link(folder) or not folder.is_dir():
+                        continue
+                    marker = folder / 'preview.json'
+                    if marker.is_file() and not platform.is_link(marker):
+                        if json.loads(marker.read_text()).get('module') == module_id:
+                            targets.append(str(folder))
+            # Never fall back to permanent deletion if the OS cannot trash the files.
+            with self.connect() as conn:
+                for table in ('remote', 'revisions'):
+                    conn.execute(f'DELETE FROM {table} WHERE module=?', (module_id,))
+                conn.execute('DELETE FROM modules WHERE id=?', (module_id,))
+                try:
+                    if targets:
+                        send2trash(targets)
+                except OSError:
+                    raise ValueError('Deletion could not finish. The module is still listed; some folders may '
+                                     'already be in Trash/Recycle Bin. Check there and retry. No permanent deletion was attempted.') from None
 
     def setting(self, key: str, default=None):
         with self.connect() as conn:

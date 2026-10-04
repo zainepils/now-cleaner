@@ -63,8 +63,9 @@ class ModulePanel:
                                       relief='flat', padx=14, pady=10, cursor='hand2')
         self.more_btn.pack(side='right')
         menu = tk.Menu(self.more_btn, tearoff=False)
-        for title, command in [('Module settings', lambda: self.edit_module(True)), ('Google Drive connection', self.drive_setup),
-                               ('Choose a different NOW download', self.choose_download),
+        for title, command in [('Rename module', self.rename_module), ('Delete module...', self.delete_module),
+                               ('Module settings', lambda: self.edit_module(True)), ('Google Drive connection', self.drive_setup),
+                               ('Add more files', self.choose_download),
                                ('Import a folder of ZIP files', self.choose_folder),
                                ('Import options', self.toggle_options), ('Update history', self.history),
                                ('Retired NotebookLM sources', self.retired_sources),
@@ -83,7 +84,8 @@ class ModulePanel:
         self.full.trace_add('write', lambda *_: self.invalidate())
         self.imports = ttk.Frame(self.frame, style='Card.TFrame')
         self.imports.pack(fill='x', pady=(0, 16))
-        self.button(self.imports, 'Change download', self.choose_download).pack(side='left')
+        self.import_btn = self.button(self.imports, 'Choose different files', lambda: self.choose_download())
+        self.import_btn.pack(side='left')
         ttk.Label(self.imports, textvariable=self.selection_text, style='Body.TLabel', wraplength=400).pack(side='left', padx=12)
         self.content = ttk.Frame(self.frame, style='Card.TFrame')
         self.content.pack(fill='both', expand=True)
@@ -97,7 +99,7 @@ class ModulePanel:
         review_row = ttk.Frame(self.table_panel, style='Card.TFrame')
         review_row.pack(fill='x', pady=(0, 10))
         ttk.Label(review_row, textvariable=self.summary, style='SectionTitle.TLabel', wraplength=540).pack(side='left')
-        self.review_btn = self.button(review_row, 'Choose category', self.resolve_selected)
+        self.review_btn = self.button(review_row, 'Change category (optional)', self.resolve_selected)
         self.review_btn.pack(side='right')
         ttk.Checkbutton(self.table_panel, text='Also show files that have not changed', variable=self.show_unchanged,
                         command=self.populate_review).pack(anchor='w', pady=(0, 8))
@@ -138,7 +140,7 @@ class ModulePanel:
         self.primary_btn.pack(side='right')
         self.cancel_btn = self.button(self.bottom, 'Cancel', self.cancel.set)
         self.cancel_btn.configure(state='disabled')
-        self.secondary_btn = self.button(self.bottom, 'Ready for NotebookLM', lambda: self.open_folder('Packs'))
+        self.secondary_btn = self.button(self.bottom, 'Open NotebookLM-ready files', lambda: self.open_folder('Packs'))
         self.notebook_btn = self.button(self.bottom, 'Open NotebookLM', self.open_notebook)
         ttk.Label(self.frame, textvariable=self.status, style='Body.TLabel', wraplength=920).pack(side='bottom', anchor='w', before=self.bottom)
         self.render()
@@ -156,16 +158,17 @@ class ModulePanel:
             '1. Create a module\nGive it the name you recognise from NOW. No Google setup is needed for local files.\n\n'
             '2. Add a download\nExport course material from NOW as a ZIP, then choose it here. You can select several ZIPs together. '
             'For a folder containing ZIPs, use More > Import a folder of ZIP files.\n\n'
-            '3. Check what changed\nUnchanged files are hidden. Yellow rows need a category or version decision. '
+            '3. Check what changed\nCategories are assigned automatically; general material goes into Reference. '
+            'Unchanged files are hidden. Yellow rows indicate a version, duplicate or rename decision. '
             'The main button takes you straight to the first decision. '
             'Missing earlier weeks are kept by default.\n\n'
             '4. Prepare and save\nPrepare upload files, check any warnings, then save the update. Your original downloads are never changed.\n\n'
-            '5. Upload to NotebookLM\nClick Ready for NotebookLM. Drag the files INSIDE that folder into NotebookLM, not the folder itself. '
+            '5. Upload to NotebookLM\nClick Open NotebookLM-ready files. Drag the files INSIDE that folder into NotebookLM, not the folder itself. '
             'These files are prepared for upload; organised originals may include unsupported formats such as HTML. '
             'For later updates, Open latest upload files shows only new or changed files. Read More > Open update instructions '
             'to see which old sources to remove before uploading replacements. Google Drive is optional and requires setup. '
             'Saving locally or sending files to Drive is not confirmation that NotebookLM has updated.\n\n'
-            'Next time\nChoose the same module and add the new NOW download. Previous saved versions remain in More > Update history.')
+            'Next time\nChoose the same module and click Add more files. Previous saved versions remain in More > Update history.')
 
     def privacy(self):
         location = Path(__file__).resolve().parents[1] / 'docs' / 'privacy.md'
@@ -206,6 +209,8 @@ class ModulePanel:
         self.cancel_btn.pack_forget()
         self.secondary_btn.pack_forget()
         self.notebook_btn.pack_forget()
+        has_saved = bool(self.modules and self.store.snapshot(self.module()['id']).get('revision'))
+        self.import_btn.configure(text='Add more files' if has_saved else 'Choose different files')
         if self.modules:
             self.new_module_btn.pack(side='left', padx=12, before=self.more_btn)
         else:
@@ -235,16 +240,19 @@ class ModulePanel:
                 title, detail = ('Ready for NotebookLM.', 'Your update is saved. Your original downloads are untouched.\n\n' + (
                     'Next, send the upload files to Google Drive. NotebookLM updates still need checking separately.'
                     if self.module()['mode'] == 'drive' else
-                    'First upload: click Ready for NotebookLM below.\nDrag the files inside that folder into NotebookLM, not the folder.\n\n'
+                    'First upload: click Open NotebookLM-ready files below.\nDrag the files inside that folder into NotebookLM, not the folder.\n\n'
                     'Updating an existing notebook? Open latest upload files.\nReplace old versions of changed sources; add genuinely new ones.\n'
-                    'See More > Open update instructions for the replacement list.'))
+                    'See More > Open update instructions for the replacement list.\n\n'
+                    'New downloads later? Click Add more files above.'))
                 action = 'Send to Google Drive' if self.module()['mode'] == 'drive' else 'Open latest upload files'
             elif self.inputs:
                 title, detail, action = ('Ready to check for changes.', 'We will compare this export with your saved module.\nUnchanged files stay untouched, and missing earlier weeks are kept.', 'Check for changes')
             else:
                 detail = ('Choose ZIP files or a folder containing ZIPs.' if self.store.setting('download_intro_seen', False) else
                           'You can add one or more ZIP downloads from NOW, or a folder containing ZIPs.\nThere is no need to unzip them first. Earlier weeks stay safe when you add new material.')
-                title, action = 'Add your NOW download.', 'Add download'
+                title, action = ('Add more course files.', 'Add more files') if has_saved else ('Add your NOW download.', 'Add download')
+                if has_saved:
+                    detail = 'Choose the latest ZIP files or a folder containing ZIPs.\nWe will add new material and update changed files. Earlier weeks stay saved.'
             self.empty_title.configure(text=title)
             self.empty_detail.configure(text=detail)
             self.steps.configure(text='Finished  -  Your next step' if self.phase == 'complete' else 'Step 1 of 3  -  Add your download' if self.modules else 'Get started')
@@ -368,11 +376,77 @@ class ModulePanel:
         save_btn = ttk.Button(pane, text='Save changes' if editing else 'Create module', command=save)
         save_btn.pack(anchor='e', pady=(15, 0))
 
+    def rename_module(self):
+        if self.busy:
+            return
+        try:
+            module = self.module()
+            name = simpledialog.askstring('Rename module', 'New module name:\nExisting files and upload identities stay unchanged.',
+                                          initialvalue=module['name'], parent=self.root)
+            if name is None:
+                return
+            self.store.rename_module(module['id'], name)
+            self.refresh(module['id'])
+            self.status.set('Module renamed. Existing files and NotebookLM sources are unchanged.')
+        except ValueError as exc:
+            messagebox.showerror('Rename module', str(exc))
+
+    def delete_module(self):
+        if self.busy:
+            return
+        try:
+            module = self.module()
+        except ValueError as exc:
+            messagebox.showinfo('Delete module', str(exc))
+            return
+        dialog = tk.Toplevel(self.root)
+        dialog.title('Delete module?')
+        dialog.transient(self.root)
+        dialog.grab_set()
+        pane = ttk.Frame(dialog, padding=24)
+        pane.pack(fill='both', expand=True)
+        ttk.Label(pane, text=f'Delete {module["name"]}?', style='SectionTitle.TLabel', wraplength=520).pack(anchor='w')
+        ttk.Label(pane, text='This removes the module from NOW Cleaner and deletes its tracking history.\n\n'
+                  'Its entire local output folder and pending imports will move to Trash/Recycle Bin, '
+                  'including organised originals, NotebookLM-ready files, reports and previous versions.\n\n'
+                  'Your original download ZIPs are NOT deleted. Files already uploaded to Google Drive or '
+                  'NotebookLM are NOT deleted. Existing backups are NOT deleted.\n\n'
+                  'You can recover trashed files until the bin is emptied, but restoring files alone '
+                  'does not restore the module in the app.', wraplength=520, justify='left').pack(anchor='w', pady=14)
+        ttk.Label(pane, text=f'Folder: {module["root"]}', wraplength=520).pack(anchor='w', pady=(0, 12))
+        ttk.Label(pane, text='Type DELETE to confirm:').pack(anchor='w')
+        confirmation = tk.StringVar()
+        entry = ttk.Entry(pane, textvariable=confirmation, width=35)
+        entry.pack(fill='x', pady=8)
+        entry.focus_set()
+        row = ttk.Frame(pane)
+        row.pack(fill='x', pady=(12, 0))
+        ttk.Button(row, text='Cancel', command=dialog.destroy).pack(side='left')
+        def perform():
+            if confirmation.get() != 'DELETE':
+                return
+            dialog.destroy()
+            def completed(_):
+                self.inputs = []
+                self.review = self.prepared = None
+                self.decisions = {}
+                self.phase = 'import'
+                self.selected.set('')
+                self.info.configure(text='')
+                self.refresh()
+                self.status.set('Module deleted. Its local files moved to Trash/Recycle Bin. Online sources were not deleted.')
+            self.work('Deleting module...', lambda: self.store.delete_module(module['id']), completed)
+        delete = ttk.Button(row, text='Delete module and local contents', command=perform, state='disabled')
+        delete.pack(side='right')
+        confirmation.trace_add('write', lambda *_: delete.configure(state='normal' if confirmation.get() == 'DELETE' else 'disabled'))
+        dialog.bind('<Escape>', lambda _: dialog.destroy())
+
     def choose_download(self):
         if self.busy:
             return
         dialog = tk.Toplevel(self.root)
-        dialog.title('Add download')
+        has_saved = bool(self.modules and self.store.snapshot(self.module()['id']).get('revision'))
+        dialog.title('Add more files' if has_saved else 'Add download')
         dialog.transient(self.root)
         dialog.grab_set()
         pane = ttk.Frame(dialog, padding=24)
@@ -481,13 +555,13 @@ class ModulePanel:
         self.decisions = {}
         self.populate_review()
         self.status.set('Already saved: no files need updating.' if self.no_changes() else
-                        'Yellow rows need a category or version decision. Earlier weeks are kept. Nothing has been saved yet.')
+                        'Categories are automatic. Earlier weeks are kept. Nothing has been saved yet.')
         self.render()
 
     def needs_decision(self, change):
         if change['key'] in self.decisions:
             return False
-        return change['status'] in ('conflict', 'possible rename', 'duplicate content') or any(c['review'] for c in change['candidates'])
+        return change['status'] in ('conflict', 'possible rename', 'duplicate content')
 
     def no_changes(self):
         return bool(self.review) and not any(count for status, count in self.review['counts'].items() if status != 'unchanged')
@@ -495,13 +569,13 @@ class ModulePanel:
     @staticmethod
     def decision_label(change):
         return {'conflict': 'Choose a version', 'possible rename': 'Check renamed file',
-                'duplicate content': 'Check duplicate', 'missing': 'Keep or remove file'}.get(change['status'], 'Choose category')
+                'duplicate content': 'Check duplicate', 'missing': 'Keep or remove file'}.get(change['status'], 'Change category (optional)')
 
     def update_review_button(self):
         if hasattr(self, 'review_btn'):
             selected = self.tree.selection()
             change = self.review['changes'][int(selected[0])] if self.review and selected else None
-            self.review_btn.configure(text=self.decision_label(change) if change else 'Choose category',
+            self.review_btn.configure(text=self.decision_label(change) if change else 'Change category (optional)',
                                       state='normal' if change and not self.busy and not self.prepared else 'disabled')
 
     def populate_review(self):
@@ -526,7 +600,7 @@ class ModulePanel:
             attention = sum(self.needs_decision(c) for c in self.review['changes'])
             self.summary.set(f'{counts.get("new", 0)} new  |  {counts.get("changed", 0)} updated  |  {counts.get("unchanged", 0)} unchanged\n' +
                              ('These files are already saved. There is nothing to upload.' if self.no_changes() else
-                              f'{attention} files need a category or version decision. Use the button below.' if attention else
+                              f'{attention} files need a version, duplicate or rename decision. Use the button below.' if attention else
                               'Earlier files stay saved. Ready to prepare your NotebookLM files.'))
         self.update_review_button()
 
@@ -564,14 +638,15 @@ class ModulePanel:
                         continue
                     decision['rename'] = 'move' if answer else 'keep'
                 initial = change['candidates'][decision.get('candidate', 0)]['group']
-                if len(chosen) > 1 and 'batch_group' in locals():
-                    group = batch_group
-                else:
-                    group = self.choose_group(initial, change['path'])
-                    batch_group = group
-                if not group:
-                    continue
-                decision['group'] = group
+                if change['status'] not in ('conflict', 'possible rename', 'duplicate content'):
+                    if len(chosen) > 1 and 'batch_group' in locals():
+                        group = batch_group
+                    else:
+                        group = self.choose_group(initial, change['path'])
+                        batch_group = group
+                    if not group:
+                        continue
+                    decision['group'] = group
             self.decisions[change['key']] = decision
             self.tree.set(index, 'pack', 'Remove approved' if decision.get('remove') else decision.get('group', 'Keep existing'))
         self.prepared = None
@@ -648,6 +723,8 @@ class ModulePanel:
             return
         def completed(snapshot):
             self.review = self.prepared = None
+            self.inputs = []
+            self.selection_text.set('New downloads? Add ZIPs or a folder of ZIPs.')
             self.phase = 'complete'
             self.status.set('Saved successfully. Your next step is shown above.')
             self.info.configure(text=f'{len(snapshot["packs"])} files ready for NotebookLM  |  Saved on your computer')
@@ -696,7 +773,7 @@ class ModulePanel:
             link = self.module()['notebook']
             if not link:
                 link = 'https://notebooklm.google.com/'
-            platform.open_url(link, prefer_chrome=True)
+            platform.open_url(link)
         except ValueError as exc:
             messagebox.showinfo('Notebook', str(exc))
 

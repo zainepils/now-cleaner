@@ -2,7 +2,7 @@
 
 ## Download for Mac
 
-[Download NOW Cleaner for Apple silicon](https://github.com/zainepils/now-cleaner/releases/download/v0.1.0/NOW-Cleaner-Apple-Silicon.dmg)
+[Download NOW Cleaner for Apple silicon](https://github.com/zainepils/now-cleaner/releases/download/v0.3.0/NOW-Cleaner-Apple-Silicon.dmg)
 
 This personal-use preview is for **Apple-silicon Macs (M-series)**, not Intel Macs
 or Windows. Python is included: no coding or terminal setup is needed.
