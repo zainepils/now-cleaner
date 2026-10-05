@@ -35,7 +35,9 @@ The repository's code and documentation are available under the [PolyForm Noncom
 
 An 11-second, silent walkthrough using demo material. Download your module content
 as ZIP files, then import a ZIP or a folder containing ZIPs into NOW Cleaner.
+
 One ZIP will include all of the content within the selected tab selected on the left.
+
 For example, pressing that download icon in 'WEEK 1' will download everything 'WEEK 1' contains.
 
 ## Privacy at a glance
