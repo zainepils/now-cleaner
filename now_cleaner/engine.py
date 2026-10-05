@@ -12,6 +12,7 @@ from pathlib import Path
 from uuid import uuid4
 
 import clean_now_notebooklm as legacy
+from .organisation import organise
 from .packs import build_packs, classify
 from .safety import digest, normal_path, safe_extract, MAX_EXPANDED_BYTES, MAX_MEMBERS
 from .store import Store
@@ -167,7 +168,10 @@ def prepare(store: Store, token: str, decisions: dict | None = None, log=print) 
             item['review'] = False
             if key in old['files']:
                 item['name'] = old['files'][key]['name']
+                if old['files'][key].get('course_path'):
+                    item['course_path'] = old['files'][key]['course_path']
             files[key] = item
+        organise(files)
         for key, item in files.items():
             src = preview_dir / 'Originals' / item['blob']
             if not src.exists():
@@ -181,7 +185,9 @@ def prepare(store: Store, token: str, decisions: dict | None = None, log=print) 
                 stem = legacy.sanitize_name(f'{module["name"]} - {Path(item["path"]).with_suffix("").as_posix().replace("/", " - ")}')[:140]
                 suffix = __import__('hashlib').sha256(key.encode()).hexdigest()[:8]
                 item['name'] = f'{stem}-{suffix}{Path(item["path"]).suffix.lower()}'
-            shutil.copy2(dst, stage / 'Current Files' / item['name'])
+            course_file = stage / 'Current Files' / item['course_path']
+            course_file.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(dst, course_file)
         packs, warnings = build_packs(files, stage, module, old, log)
         changed = [key for key, pack in packs.items() if old['packs'].get(key, {}).get('fingerprint') != pack['fingerprint']]
         retired = [key for key in old['packs'] if key not in packs]
@@ -236,7 +242,7 @@ def apply(store: Store, token: str, log=print) -> dict:
         for item in result['files'].values():
             if digest(stage / 'Originals' / item['blob']) != item['hash']:
                 raise ValueError('Original changed after review')
-            if digest(stage / 'Current Files' / item['name']) != item['hash']:
+            if digest(stage / 'Current Files' / normal_path(item.get('course_path', item['name']))) != item['hash']:
                 raise ValueError('Cleaned original changed after review')
         for pack in result['packs'].values():
             if digest(stage / 'Packs' / pack['filename']) != pack['hash']:

@@ -69,7 +69,7 @@ class ModulePanel:
                                ('Import a folder of ZIP files', self.choose_folder),
                                ('Import options', self.toggle_options), ('Update history', self.history),
                                ('Retired NotebookLM sources', self.retired_sources),
-                               ('Open organised originals (not upload-ready)', lambda: self.open_folder('Current Files')),
+                               ('Open course files (for studying)', lambda: self.open_folder('Current Files')),
                                ('Open update instructions', lambda: self.open_folder('Reports')),
                                ('How to use NOW Cleaner', self.help), ('Privacy and your data', self.privacy)]:
             menu.add_command(label=title, command=command)

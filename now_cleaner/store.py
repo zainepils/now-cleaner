@@ -25,13 +25,22 @@ PUBLIC_FOLDERS = {'Current Files': 'Course Files', 'Packs': 'NotebookLM-ready Fi
 
 def folder_manifest(folder: Path) -> dict:
     result = {}
-    for path in folder.iterdir():
-        if path.name == '.now-files.json':
-            continue
-        if platform.is_link(path) or not path.is_file():
-            raise ValueError('Module output contains unexpected files or folders; move your additions aside first')
-        with path.open('rb') as stream:
-            result[path.name] = hashlib.file_digest(stream, 'sha256').hexdigest()
+    def visit(parent):
+        for path in parent.iterdir():
+            if path == folder / '.now-files.json':
+                continue
+            if platform.is_link(path):
+                raise ValueError('Module output contains unexpected links; move your additions aside first')
+            relative = path.relative_to(folder).as_posix()
+            if path.is_dir():
+                result[relative + '/'] = 'directory'
+                visit(path)
+            elif path.is_file():
+                with path.open('rb') as stream:
+                    result[relative] = hashlib.file_digest(stream, 'sha256').hexdigest()
+            else:
+                raise ValueError('Module output contains unexpected files; move your additions aside first')
+    visit(folder)
     return result
 
 

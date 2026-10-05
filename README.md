@@ -100,6 +100,16 @@ Documents/
         Latest Update/             # only new/changed upload-ready packs
 ```
 
+Course Files follows the original learning-room folder structure, including module-specific
+names such as MBS Discover or Getting help. Clear week folder names are standardised
+(`Week 1` becomes `Week 01`); filenames remain readable inside those folders.
+No lecture/seminar template is imposed, and empty category folders are not generated.
+Colliding output names get a stable short suffix instead of overwriting another file.
+Revised files keep their assigned paths, and partial imports retain earlier weeks.
+This organisation is available in source builds after v0.3.1 and the updated local app;
+older modules adopt it on their next saved update, without moving their module root.
+Earlier revisions remain available in History. NotebookLM pack identities are unchanged.
+
 History, reports and technical files stay in a hidden `.history` directory; use **More > Update history** or **Open update instructions** to access them. Mac uses app-managed folder links; Windows uses real folders, without administrator permissions or Developer Mode. Windows refuses to replace folders you have edited outside the app: move your edits elsewhere first. This uses additional disk space on Windows. Treat these folders as generated output and keep personal edits elsewhere.
 
 Existing modules keep their original paths and layout; no course files are moved automatically. Duplicate module names receive a short suffix. Renaming a module changes its display name, not its existing folder path. On Windows, the default respects your configured Documents location, including redirected Documents folders. macOS may ask for Documents access; Windows Controlled Folder Access can block writes. A custom parent folder can be selected if needed. Documents may be synced by your own iCloud/OneDrive settings; NOW Cleaner does not configure that syncing.

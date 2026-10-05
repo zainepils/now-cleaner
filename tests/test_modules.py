@@ -198,7 +198,7 @@ class ModuleTests(unittest.TestCase):
         reader = PdfReader(Path(result['revision_path']) / 'Packs' / pack['filename'])
         self.assertEqual(len(reader.pages), 4)
         self.assertTrue(any(list(page.images) for page in reader.pages))
-        self.assertEqual(len(list((Path(result['revision_path']) / 'Current Files').iterdir())), 2)
+        self.assertEqual(len([p for p in (Path(result['revision_path']) / 'Current Files').rglob('*') if p.is_file()]), 2)
 
     def test_failed_visual_conversion_does_not_replace_current(self):
         first = self.import_files({'Lecture/a.txt': 'a'})
@@ -284,7 +284,7 @@ class ModuleTests(unittest.TestCase):
             self.assertFalse(course.is_symlink())
             self.assertEqual(len([p for p in course.iterdir() if not p.name.startswith('.')]), 1)
             self.store.publish_links(self.module['id'])
-            next(p for p in course.iterdir() if not p.name.startswith('.')).write_text('my edit')
+            next(course.rglob('*.txt')).write_text('my edit')
             with self.assertRaisesRegex(ValueError, 'edited outside'):
                 self.store.publish_links(self.module['id'])
         self.assertTrue(Path(first['revision_path']).is_dir())
@@ -302,7 +302,7 @@ class ModuleTests(unittest.TestCase):
             self.store.publish_links(self.module['id'])
             next_revision = self.root / 'next-revision'
             shutil.copytree(first['revision_path'], next_revision)
-            next((next_revision / 'Current Files').iterdir()).write_text('updated')
+            next((next_revision / 'Current Files').rglob('*.txt')).write_text('updated')
             snapshot = dict(first, revision_path=str(next_revision))
             replace = os.replace
             def fail_pack(source, target):
@@ -313,10 +313,39 @@ class ModuleTests(unittest.TestCase):
                 with self.assertRaisesRegex(OSError, 'interrupted publish'):
                     self.store.publish_links(self.module['id'])
             course = self.store.folder_path(self.module['id'], 'Current Files')
-            self.assertEqual(next(p for p in course.iterdir() if not p.name.startswith('.')).read_text(), 'a')
+            self.assertEqual(next(course.rglob('*.txt')).read_text(), 'a')
             self.store.publish_links(self.module['id'])
             self.assertFalse(list(Path(self.module['root']).glob('.publish-*')))
             self.assertFalse(list(Path(self.module['root']).glob('.previous-*')))
+
+    def test_course_folders_preserve_module_specific_names_and_tidy_weeks(self):
+        result = self.import_files({'Week 1/Lectures/Introduction.txt': 'lecture',
+                                    'MBS Discover/Getting help/Contact details.txt': 'help',
+                                    'Assessments/Brief.txt': 'assessment'})
+        course = Path(result['revision_path']) / 'Current Files'
+        self.assertEqual((course / 'Week 01/Lectures/Introduction.txt').read_text(), 'lecture')
+        self.assertEqual((course / 'MBS Discover/Getting help/Contact details.txt').read_text(), 'help')
+        self.assertTrue((course / 'Assessments/Brief.txt').is_file())
+        self.assertFalse((course / 'Seminars').exists())
+
+    def test_course_paths_are_stable_when_week_names_collide(self):
+        first = self.import_files({'Week 1/Lectures/Notes.txt': 'first'})
+        second = self.import_files({'Week 01/Lectures/Notes.txt': 'second'})
+        original = second['files']['week 1/lectures/notes.txt']
+        self.assertEqual(original['course_path'], first['files']['week 1/lectures/notes.txt']['course_path'])
+        self.assertNotEqual(original['course_path'], second['files']['week 01/lectures/notes.txt']['course_path'])
+        course = Path(second['revision_path']) / 'Current Files'
+        self.assertEqual((course / original['course_path']).read_text(), 'first')
+        self.assertEqual(len(list(course.rglob('*.txt'))), 2)
+
+    def test_revised_course_file_replaces_content_without_changing_path(self):
+        first = self.import_files({'Week 2/MBS Discover/Help.txt': 'old'})
+        second = self.import_files({'Week 2/MBS Discover/Help.txt': 'new'})
+        key = 'week 2/mbs discover/help.txt'
+        self.assertEqual(first['files'][key]['course_path'], second['files'][key]['course_path'])
+        course = Path(second['revision_path']) / 'Current Files'
+        self.assertEqual((course / second['files'][key]['course_path']).read_text(), 'new')
+        self.assertEqual(len(list(course.rglob('*.txt'))), 1)
 
 
 class SafetyTests(unittest.TestCase):
