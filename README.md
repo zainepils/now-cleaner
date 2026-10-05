@@ -51,6 +51,15 @@ provide evidence you can inspect; they do not prove the app is free of vulnerabi
 
 ## Modules & updates
 
+![NOW Cleaner app walkthrough using fictional module content](docs/media/app-walkthrough.gif)
+
+**[Watch or download the full walkthrough with music (1 min 52 sec)](https://github.com/zainepils/now-cleaner/releases/download/v0.3.1/NOW-Cleaner-Walkthrough-With-Music.mp4)**
+
+The inline animation is silent; the MP4 includes the background music. This demo
+shows the recorded app version; folder names and controls may differ in later releases.
+Soundtrack: [Modern Chillout (Future Calm) by PenguinMusic](https://pixabay.com/music/upbeat-penguinmusic-modern-chillout-future-calm-12641/).
+The soundtrack remains subject to its own licence, not the project's code licence.
+
 1. Create a module by giving it a name. Folder, NotebookLM link and source-limit settings are optional. Defaults: local files, one NotebookLM notebook per module, 50 source slots, 15 reserved for independently added sources.
 2. Choose **Add download**, then **ZIP files** or **Folder of ZIPs**. Multiple ZIPs can be selected together. First-time guidance explains both options and that you do not need to unzip files yourself.
 3. Check what changed. Categories are automatic; general material goes into Reference, and saved category choices are reused. Category changes are optional. Yellow rows are reserved for conflicting versions, duplicates or uncertain renames. Unchanged imports show that there is nothing to upload. Partial imports keep missing earlier files; full snapshots only remove files you explicitly approve.
