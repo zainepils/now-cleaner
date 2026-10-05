@@ -40,6 +40,17 @@ class GuidedUITests(unittest.TestCase):
         self.assertTrue(self.panel.empty.winfo_ismapped())
         self.assertFalse(self.panel.table_panel.winfo_ismapped())
         self.assertFalse(self.panel.imports.winfo_ismapped())
+        self.assertFalse(self.panel.course_btn.winfo_ismapped())
+
+    def test_course_files_action_is_visible_after_save(self):
+        module = self.add_module()
+        with mock.patch.object(self.store, 'snapshot', return_value={'revision': 'example', 'packs': {}}):
+            self.panel.render()
+            self.root.update()
+            self.assertTrue(self.panel.course_btn.winfo_ismapped())
+            with mock.patch.object(self.panel, 'open_folder') as opener:
+                self.panel.course_btn.invoke()
+                opener.assert_called_once_with('Current Files')
 
     def test_import_action_guides_user_to_choose_files(self):
         self.add_module()

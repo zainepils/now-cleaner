@@ -109,6 +109,8 @@ Revised files keep their assigned paths, and partial imports retain earlier week
 This organisation is available in source builds after v0.3.1 and the updated local app;
 older modules adopt it on their next saved update, without moving their module root.
 Earlier revisions remain available in History. NotebookLM pack identities are unchanged.
+After saving a module, **Open course files** is visible beside **Open NotebookLM-ready files**;
+use the first for studying and the second for uploads.
 
 History, reports and technical files stay in a hidden `.history` directory; use **More > Update history** or **Open update instructions** to access them. Mac uses app-managed folder links; Windows uses real folders, without administrator permissions or Developer Mode. Windows refuses to replace folders you have edited outside the app: move your edits elsewhere first. This uses additional disk space on Windows. Treat these folders as generated output and keep personal edits elsewhere.
 
