@@ -27,6 +27,13 @@ Windows is a local-only preview. Google Drive is unavailable on Windows for now.
 
 The repository's code and documentation are available under the [PolyForm Noncommercial License 1.0.0](LICENSE). You may use, modify, and share them for permitted noncommercial purposes, provided you pass on the license terms and [required notice](NOTICE). Commercial use requires separate permission from the owner. This is source-available software, not an open-source license. The license does not grant rights to any course content or other files a user processes with the tool.
 
+## Downloading module content
+
+[Watch: how to download module content from NOW](docs/media/download-module-content.mp4)
+
+An 11-second, silent walkthrough using demo material. Download your module content
+as ZIP files, then import a ZIP or a folder containing ZIPs into NOW Cleaner.
+
 ## Privacy at a glance
 
 - **Your course files are not sent to the maintainer.** There is no developer-operated backend, analytics, telemetry or automatic crash-report upload in the application code.
