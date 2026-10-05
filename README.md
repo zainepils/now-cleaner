@@ -29,7 +29,9 @@ The repository's code and documentation are available under the [PolyForm Noncom
 
 ## Downloading module content
 
-[Watch: how to download module content from NOW](docs/media/download-module-content.mp4)
+![Silent demo showing how to download module content from NOW](docs/media/download-module-content.gif)
+
+[Watch or download the full-quality video](docs/media/download-module-content.mp4)
 
 An 11-second, silent walkthrough using demo material. Download your module content
 as ZIP files, then import a ZIP or a folder containing ZIPs into NOW Cleaner.
