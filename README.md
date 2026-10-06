@@ -19,6 +19,22 @@ Windows ARM devices are not supported by this installer.
 the Windows installer is unsigned. First-launch security approval may be required.
 Read the [Mac installation guide](docs/install.md) or [Windows guide](docs/windows.md).
 
+### Antivirus scan reports
+
+View the VirusTotal reports for the exact **v0.3.1** installers linked above:
+
+| Installer | Report |
+| --- | --- |
+| Apple-silicon Mac | [View antivirus scan report](https://www.virustotal.com/gui/file/852f9d41ec0fc178bbe1132e4b5d7f1f88b95195b48e76b5068a763236cd6492/detection) |
+| Intel Mac | [View antivirus scan report](https://www.virustotal.com/gui/file/41d726aa39a8923f75dc0125d2fa4278d3b068420cd49ea9a1d4a8828c9f37ff/detection) |
+| Windows | [View antivirus scan report](https://www.virustotal.com/gui/file/40b6676ce3915117579e7e2bb4ed7b6cbe89e90b36d374b5f46ada4173530d06/detection) |
+
+Each report's SHA-256 identifier matches its published installer; compare it with
+the release's [SHA256SUMS.txt](https://github.com/zainepils/now-cleaner/releases/download/v0.3.1/SHA256SUMS.txt).
+Check each report for its latest analysis date and results. These are antivirus
+reports, not a safety certification, privacy audit or replacement for platform
+signing/notarization. They apply only to these files, not future releases.
+
 Local files work without Google setup. Office visual packs need LibreOffice installed
 separately; optional Drive connection still needs personal OAuth setup.
 
