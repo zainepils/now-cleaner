@@ -54,11 +54,14 @@ or bypass Defender to run it.
   build-environment issue. A rebuild would not be assumed byte-reproducible.
 - The specification enables UPX if available. Actual UPX use in this build has
   not been established; compression is not assumed to explain the detection.
-- The [Microsoft developer submission portal](https://www.microsoft.com/en-us/wdsi/filesubmission)
-  was opened. Submission requires Microsoft account sign-in. **No review has been
-  submitted and no Microsoft decision has been received yet.**
-- After sign-in, submit this exact installer and request review of the detection.
-  Record the submission ID and Microsoft's response. If additional analysis is
+- The exact installer was submitted through the
+  [Microsoft submission portal](https://www.microsoft.com/en-us/wdsi/filesubmission)
+  on 6 October 2026. The portal confirmed **Submitted**, with final determination
+  **Pending**. Its current detection showed `Program:Win32/Wacapew.C!ml`, distinct
+  from the earlier VirusTotal label, with definition version `1.459.574.0`.
+  This is not analyst clearance or confirmation of a false positive. The
+  account-specific submission reference is retained privately, not published.
+- Await Microsoft's determination before removing the warning. If additional analysis is
   requested, inspect/scan the installed app payload in an isolated Windows
   environment, retaining Defender protections.
 - Do not change packaging merely to evade detection. Any future release needs
