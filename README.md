@@ -6,6 +6,12 @@ A local Mac and Windows desktop app for organising NTU NOW course ZIP exports an
 
 Choose the download for your computer. Python is included; no coding setup is needed.
 
+**Windows download warning (6 October 2026):** Microsoft flags the v0.3.1
+installer as `Trojan:Win32/Wacatac.B!ml` in VirusTotal (1/69 engines).
+The detection is unresolved; a false positive has not been confirmed.
+**Do not install this Windows release pending investigation, and do not bypass
+Defender or disable antivirus.** See the [investigation notes](docs/windows-detection-review.md).
+
 | Your computer | Download | Installation |
 | --- | --- | --- |
 | Mac with an Apple M-series chip | [Apple-silicon Mac installer](https://github.com/zainepils/now-cleaner/releases/download/v0.3.1/NOW-Cleaner-Apple-Silicon.dmg) | Open the DMG and drag the app into Applications. |
@@ -28,6 +34,10 @@ View the VirusTotal reports for the exact **v0.3.1** installers linked above:
 | Apple-silicon Mac | [View antivirus scan report](https://www.virustotal.com/gui/file/852f9d41ec0fc178bbe1132e4b5d7f1f88b95195b48e76b5068a763236cd6492/detection) |
 | Intel Mac | [View antivirus scan report](https://www.virustotal.com/gui/file/41d726aa39a8923f75dc0125d2fa4278d3b068420cd49ea9a1d4a8828c9f37ff/detection) |
 | Windows | [View antivirus scan report](https://www.virustotal.com/gui/file/40b6676ce3915117579e7e2bb4ed7b6cbe89e90b36d374b5f46ada4173530d06/detection) |
+
+Reports inspected on 6 October 2026: both Mac installers showed 0/61 detections;
+the Windows installer showed the Microsoft detection described above. These
+are observations of the reports, not safety guarantees; results may change.
 
 Each report's SHA-256 identifier matches its published installer; compare it with
 the release's [SHA256SUMS.txt](https://github.com/zainepils/now-cleaner/releases/download/v0.3.1/SHA256SUMS.txt).

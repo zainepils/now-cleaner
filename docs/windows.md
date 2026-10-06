@@ -1,5 +1,11 @@
 # Windows Preview
 
+**Do not install v0.3.1 pending investigation.** Its installer has an unresolved
+Microsoft `Trojan:Win32/Wacatac.B!ml` detection in VirusTotal (1/69 engines,
+checked 6 October 2026). A false positive is not confirmed. Do not bypass Defender
+or disable antivirus. See [investigation notes](windows-detection-review.md).
+The installation steps below do not override this warning.
+
 This is a **local-only, unsigned preview** for Windows 10/11 on x64 Intel/AMD PCs.
 It is not yet confirmed on a student's everyday PC. ARM Windows is not supported by
 this installer. No Python installation or administrator account is required.
